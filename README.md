@@ -41,6 +41,33 @@ Login on Linux/Windows opens a separate native window rather than an embedded
 WebView (the OS-native webview on those platforms isn't embeddable the way
 Android's is); a "Done" button in the app closes it once you've logged in.
 
+## Installing / updating
+
+Releases are built by `.github/workflows/release.yml` on every `vX.Y.Z` tag
+push and published to a [GitHub Release](https://github.com/alann-estrada-KSH/claude_usage_monitor/releases)
+with a Linux `.deb` and a Windows installer.
+
+**Linux (apt):**
+
+```bash
+echo "deb [trusted=yes] https://alann-estrada-ksh.github.io/claude_usage_monitor/apt stable main" \
+  | sudo tee /etc/apt/sources.list.d/claude-usage-monitor.list
+sudo apt update
+sudo apt install claude-usage-monitor
+```
+
+Future `apt upgrade` picks up new releases automatically -- the repo is
+unsigned (`[trusted=yes]`), matching a small unofficial personal tool with no
+signing infrastructure; don't add this line if that tradeoff bothers you and
+just grab the `.deb` from Releases instead.
+
+**Windows:** download `ClaudeUsageMonitorSetup.exe` from the latest release
+and run it, or use Settings > Updates inside the app once installed --
+it checks GitHub Releases, downloads, and runs the installer for you.
+
+**Android:** not distributed anywhere (no Play Store listing) -- build and
+`flutter install` it yourself, or sideload the debug/release APK.
+
 ### Vendored patches: `desktop_webview_window` on Linux
 
 `third_party/desktop_webview_window` is a local fork of the pub.dev package

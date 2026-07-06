@@ -80,6 +80,9 @@ dependencies:
   # Shows the running app version/build number in Settings.
   package_info_plus: ^10.2.0
 
+  # File path joining for the Windows update downloader.
+  path: ^1.9.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

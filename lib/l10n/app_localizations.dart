@@ -788,6 +788,60 @@ abstract class AppLocalizations {
   /// **'Nothing logged yet.'**
   String get debugNotificationLogEmpty;
 
+  /// No description provided for @updatesSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Updates'**
+  String get updatesSection;
+
+  /// No description provided for @updatesCurrentVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'Current version: v{version}'**
+  String updatesCurrentVersion(String version);
+
+  /// No description provided for @updatesCurrentVersionUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Current version: unknown'**
+  String get updatesCurrentVersionUnknown;
+
+  /// No description provided for @updatesCheckButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Check for updates'**
+  String get updatesCheckButton;
+
+  /// No description provided for @updatesChecking.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking...'**
+  String get updatesChecking;
+
+  /// No description provided for @updatesUpToDate.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re on the latest version.'**
+  String get updatesUpToDate;
+
+  /// No description provided for @updatesAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Version {version} available.'**
+  String updatesAvailable(String version);
+
+  /// No description provided for @updatesDownloadAndInstall.
+  ///
+  /// In en, this message translates to:
+  /// **'Download and install'**
+  String get updatesDownloadAndInstall;
+
+  /// No description provided for @updatesDownloading.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading... the app will close to install.'**
+  String get updatesDownloading;
+
   /// No description provided for @resetSection.
   ///
   /// In en, this message translates to:

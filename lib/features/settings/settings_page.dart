@@ -9,6 +9,8 @@ import '../../core/models/app_settings.dart';
 import '../../core/models/claude_account.dart';
 import '../../core/notifications/notification_service.dart';
 import '../../core/storage/notification_log_store.dart';
+import '../../core/update/app_update_info.dart';
+import '../../core/update/update_checker.dart';
 import '../../l10n/app_localizations.dart';
 import '../accounts/account_provider.dart';
 import '../dashboard/claude_mark.dart';
@@ -54,7 +56,10 @@ class SettingsPage extends StatelessWidget {
             const SizedBox(height: 16),
             _SectionCard(title: l10n.debugPanelSection, child: const _DebugPanel()),
           ],
-          const SizedBox(height: 16),
+          if (Platform.isWindows) ...[
+            _SectionCard(title: l10n.updatesSection, child: const _UpdatesControl()),
+            const SizedBox(height: 16),
+          ],
           _SectionCard(title: l10n.resetSection, child: const _ResetSettingsControl()),
           const SizedBox(height: 16),
           const _AboutFooter(),
@@ -199,6 +204,104 @@ class _KeepAliveControl extends StatelessWidget {
                 onSelected: (_) => settings.setKeepSessionAliveInterval(minutes),
               );
             }).toList(),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _UpdatesControl extends StatefulWidget {
+  const _UpdatesControl();
+
+  @override
+  State<_UpdatesControl> createState() => _UpdatesControlState();
+}
+
+class _UpdatesControlState extends State<_UpdatesControl> {
+  static const _checker = UpdateChecker();
+
+  String? _currentVersion;
+  bool _checking = false;
+  bool _downloading = false;
+  double _downloadProgress = 0;
+  AppUpdateInfo? _available;
+  bool _checkedOnce = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadVersion();
+  }
+
+  Future<void> _loadVersion() async {
+    final info = await PackageInfo.fromPlatform();
+    if (mounted) setState(() => _currentVersion = info.version);
+  }
+
+  Future<void> _check() async {
+    setState(() => _checking = true);
+    final update = await _checker.checkForUpdate();
+    if (mounted) {
+      setState(() {
+        _checking = false;
+        _checkedOnce = true;
+        _available = update;
+      });
+    }
+  }
+
+  Future<void> _downloadAndInstall() async {
+    final update = _available;
+    if (update == null) return;
+    setState(() {
+      _downloading = true;
+      _downloadProgress = 0;
+    });
+    final installer = await _checker.downloadInstaller(
+      update.downloadUrl,
+      onProgress: (p) {
+        if (mounted) setState(() => _downloadProgress = p);
+      },
+    );
+    await _checker.runInstallerAndExit(installer);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final update = _available;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          _currentVersion == null
+              ? l10n.updatesCurrentVersionUnknown
+              : l10n.updatesCurrentVersion(_currentVersion!),
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        const SizedBox(height: 12),
+        if (_downloading) ...[
+          LinearProgressIndicator(value: _downloadProgress > 0 ? _downloadProgress : null),
+          const SizedBox(height: 8),
+          Text(l10n.updatesDownloading, style: Theme.of(context).textTheme.bodySmall),
+        ] else if (update != null) ...[
+          Text(l10n.updatesAvailable(update.version)),
+          const SizedBox(height: 12),
+          FilledButton.icon(
+            onPressed: _downloadAndInstall,
+            icon: const Icon(Icons.download_outlined),
+            label: Text(l10n.updatesDownloadAndInstall),
+          ),
+        ] else ...[
+          if (_checkedOnce) Text(l10n.updatesUpToDate, style: Theme.of(context).textTheme.bodySmall),
+          if (_checkedOnce) const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: _checking ? null : _check,
+            icon: _checking
+                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                : const Icon(Icons.system_update_outlined),
+            label: Text(_checking ? l10n.updatesChecking : l10n.updatesCheckButton),
           ),
         ],
       ],

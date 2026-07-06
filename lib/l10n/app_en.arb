@@ -203,6 +203,25 @@
   "debugNo": "no",
   "debugNotificationLog": "Notification log (already-fired keys)",
   "debugNotificationLogEmpty": "Nothing logged yet.",
+  "updatesSection": "Updates",
+  "updatesCurrentVersion": "Current version: v{version}",
+  "@updatesCurrentVersion": {
+    "placeholders": {
+      "version": {"type": "String"}
+    }
+  },
+  "updatesCurrentVersionUnknown": "Current version: unknown",
+  "updatesCheckButton": "Check for updates",
+  "updatesChecking": "Checking...",
+  "updatesUpToDate": "You're on the latest version.",
+  "updatesAvailable": "Version {version} available.",
+  "@updatesAvailable": {
+    "placeholders": {
+      "version": {"type": "String"}
+    }
+  },
+  "updatesDownloadAndInstall": "Download and install",
+  "updatesDownloading": "Downloading... the app will close to install.",
   "resetSection": "Reset",
   "resetDescription": "Resets all settings (intervals, theme, accent color, font, thresholds, etc.) back to their original values. Doesn't touch your accounts or sessions.",
   "resetButton": "Reset settings",

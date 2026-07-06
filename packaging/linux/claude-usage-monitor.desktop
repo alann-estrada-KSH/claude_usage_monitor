@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Claude Usage Monitor
+Comment=Unofficial Claude.ai usage monitor
+Exec=claude-usage-monitor
+Icon=claude-usage-monitor
+Terminal=false
+Categories=Utility;
+StartupWMClass=claude_usage_monitor

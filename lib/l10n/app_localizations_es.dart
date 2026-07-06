@@ -402,6 +402,38 @@ class AppLocalizationsEs extends AppLocalizations {
   String get debugNotificationLogEmpty => 'Nada registrado aún.';
 
   @override
+  String get updatesSection => 'Actualizaciones';
+
+  @override
+  String updatesCurrentVersion(String version) {
+    return 'Versión actual: v$version';
+  }
+
+  @override
+  String get updatesCurrentVersionUnknown => 'Versión actual: desconocida';
+
+  @override
+  String get updatesCheckButton => 'Buscar actualizaciones';
+
+  @override
+  String get updatesChecking => 'Buscando...';
+
+  @override
+  String get updatesUpToDate => 'Ya tienes la última versión.';
+
+  @override
+  String updatesAvailable(String version) {
+    return 'Versión $version disponible.';
+  }
+
+  @override
+  String get updatesDownloadAndInstall => 'Descargar e instalar';
+
+  @override
+  String get updatesDownloading =>
+      'Descargando... la app se cerrará para instalar.';
+
+  @override
   String get resetSection => 'Restablecer';
 
   @override

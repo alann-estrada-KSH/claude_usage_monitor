@@ -1,0 +1,117 @@
+name: Release
+
+# Tag push (v1.2.3) builds Linux + Windows, publishes both to a GitHub
+# Release, and republishes the apt repo (Linux) to GitHub Pages so
+# `apt update && apt upgrade` picks up the new version. See
+# packaging/linux/build_deb.sh and packaging/windows/installer.iss for the
+# actual packaging steps this just wires together, and the README for the
+# apt install line end users run once.
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+env:
+  FLUTTER_VERSION: "3.44.4"
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+
+      - name: Install Linux build + packaging deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            clang cmake ninja-build pkg-config \
+            libgtk-3-dev liblzma-dev \
+            libwebkit2gtk-4.1-dev libayatana-appindicator3-dev \
+            dpkg-dev
+
+      - name: Resolve version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - run: flutter pub get
+      - run: flutter config --enable-linux-desktop
+      - run: flutter build linux --release
+
+      - name: Build .deb
+        run: packaging/linux/build_deb.sh "${{ steps.version.outputs.version }}"
+
+      - name: Publish .deb to the GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: claude-usage-monitor_${{ steps.version.outputs.version }}_amd64.deb
+
+      - name: Assemble apt repo
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.version.outputs.version }}"
+          rm -rf apt
+          mkdir -p apt/pool/main apt/dists/stable/main/binary-amd64
+          cp "claude-usage-monitor_${VERSION}_amd64.deb" apt/pool/main/
+          cd apt
+          dpkg-scanpackages pool /dev/null > dists/stable/main/binary-amd64/Packages
+          gzip -9c dists/stable/main/binary-amd64/Packages > dists/stable/main/binary-amd64/Packages.gz
+          cat > dists/stable/Release <<EOF
+          Origin: Claude Usage Monitor
+          Label: Claude Usage Monitor
+          Suite: stable
+          Codename: stable
+          Architectures: amd64
+          Components: main
+          Description: Unofficial Claude Usage Monitor apt repo (unsigned, [trusted=yes])
+          EOF
+
+      - name: Publish apt repo to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: apt
+          destination_dir: apt
+          keep_files: false
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+
+      - name: Resolve version from tag
+        id: version
+        shell: bash
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - run: flutter pub get
+      - run: flutter config --enable-windows-desktop
+      - run: flutter build windows --release
+
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress -y
+
+      - name: Build installer
+        shell: cmd
+        run: |
+          "C:\Program Files (x86)\Inno Setup 6\iscc.exe" /DMyAppVersion=${{ steps.version.outputs.version }} packaging\windows\installer.iss
+
+      - name: Publish installer to the GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ClaudeUsageMonitorSetup.exe

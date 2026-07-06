@@ -51,3 +51,8 @@ app.*.map.json
 # for why each is patched) -- only their example/ apps are excluded, those are
 # unmodified upstream demo apps, not part of this build.
 /third_party/*/example/
+
+# Local packaging output (see packaging/linux/build_deb.sh, packaging/windows/installer.iss)
+/packaging/linux/stage/
+*.deb
+/ClaudeUsageMonitorSetup.exe

@@ -1,0 +1,8 @@
+# The global git config on at least one dev machine has core.autocrlf=true,
+# which would rewrite shell scripts to CRLF on checkout and break their
+# shebang line in CI (ubuntu-latest). Force LF for anything that runs as a
+# script regardless of the checking-out machine's autocrlf setting.
+* text=auto
+*.sh text eol=lf
+*.desktop text eol=lf
+*.iss text eol=lf
