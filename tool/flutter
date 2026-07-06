@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# Runs flutter_tools directly via its compiled snapshot, bypassing bin/flutter
+# entirely. bin/flutter -> bin/internal/shared.sh unconditionally sources
+# bin/internal/bootstrap.sh *if it's present*, and the Flutter snap rewrites
+# that file into this SDK checkout every time /snap/bin/flutter runs. It
+# prepends the snap's own bundled (old) glib/cmake/ld to PATH and
+# PKG_CONFIG_PATH, which breaks Linux desktop builds against system
+# webkit2gtk/libsoup and against a fresh system libc's RELR relocations --
+# no env override we pass to bin/flutter survives that sourcing.
+# Calling the snapshot directly skips shared.sh/bootstrap.sh, so this stays
+# correct even after the snap rewrites bootstrap.sh again, without touching
+# any file outside this project. See README.md "Linux build dependencies".
+#
+# Usage: tool/flutter run -d linux
+#        tool/flutter build linux --debug
+set -euo pipefail
+
+RAW_SDK="${FLUTTER_RAW_SDK:-$HOME/snap/flutter/common/flutter}"
+DART="$RAW_SDK/bin/cache/dart-sdk/bin/dart"
+SNAPSHOT="$RAW_SDK/bin/cache/flutter_tools.snapshot"
+
+if [[ ! -x "$DART" || ! -f "$SNAPSHOT" ]]; then
+  echo "tool/flutter: Flutter SDK cache not found under $RAW_SDK/bin/cache" >&2
+  echo "Set FLUTTER_RAW_SDK to your Flutter checkout, or run the real flutter once to populate its cache." >&2
+  exit 1
+fi
+
+# Flutter 3.44.4's generated Linux CMake install step references
+# build/native_assets/linux unconditionally even though this project has no
+# native_assets/FFI hooks, so nothing else ever creates it.
+mkdir -p build/native_assets/linux
+
+exec env -u PKG_CONFIG_PATH \
+  PATH="$RAW_SDK/bin:/usr/bin:/bin:/usr/local/bin" \
+  FLUTTER_ROOT="$RAW_SDK" \
+  CC=clang CXX=clang++ \
+  "$DART" --packages="$RAW_SDK/packages/flutter_tools/.dart_tool/package_config.json" "$SNAPSHOT" "$@"

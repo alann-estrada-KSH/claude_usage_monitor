@@ -1,0 +1,145 @@
+name: claude_usage_monitor
+description: "A new Flutter project."
+# The following line prevents the package from being accidentally published to
+# pub.dev using `flutter pub publish`. This is preferred for private packages.
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+
+# The following defines the version and build number for your application.
+# A version number is three numbers separated by dots, like 1.2.43
+# followed by an optional build number separated by a +.
+# Both the version and the builder number may be overridden in flutter
+# build by specifying --build-name and --build-number, respectively.
+# In Android, build-name is used as versionName while build-number used as versionCode.
+# Read more about Android versioning at https://developer.android.com/studio/publish/versioning
+# In iOS, build-name is used as CFBundleShortVersionString while build-number is used as CFBundleVersion.
+# Read more about iOS versioning at
+# https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
+# In Windows, build-name is used as the major, minor, and patch parts
+# of the product and file versions while build-number is used as the build suffix.
+version: 1.1.0+2
+
+environment:
+  sdk: ^3.12.2
+
+# Dependencies specify other packages that your package needs in order to work.
+# To automatically upgrade your package dependencies to the latest versions
+# consider running `flutter pub upgrade --major-versions`. Alternatively,
+# dependencies can be manually updated by changing the version numbers below to
+# the latest version available on pub.dev. To see which dependencies have newer
+# versions available, run `flutter pub outdated`.
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  intl: any
+
+  # The following adds the Cupertino Icons font to your application.
+  # Use with the CupertinoIcons class for iOS style icons.
+  cupertino_icons: ^1.0.8
+
+  # WebView on Android.
+  flutter_inappwebview: ^6.1.5
+
+  # WebView on Linux + Windows: native window backed by webkit2gtk-4.1
+  # (Linux) / WebView2 (Windows). flutter_inappwebview's own Linux plugin
+  # requires WPE WebKit, which Ubuntu no longer packages -- see README.
+  desktop_webview_window: ^0.3.0
+
+  # Non-sensitive config/cache storage.
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  path_provider: ^2.1.5
+
+  # State management for phase 1 (single account flow).
+  provider: ^6.1.5
+
+  # Renders the app's sparkle mark from raw SVG path data.
+  flutter_svg: ^2.0.10+1
+
+  # System tray + window show/hide/close-to-tray (Linux). Needs
+  # libayatana-appindicator3-dev (or appindicator3-0.1) installed system-wide
+  # to build on Linux -- see README.
+  tray_manager: ^0.5.0
+  window_manager: ^0.5.1
+
+  # Skip fetches (and show a banner) while offline instead of hitting
+  # claude.ai and getting a SocketException.
+  connectivity_plus: ^6.1.3
+
+  # Local (in-app-triggered) notifications for limit resets/exhaustion.
+  flutter_local_notifications: ^18.0.1
+  timezone: ^0.10.1
+
+  # Android-only periodic background work: keeps Claude's session cookies
+  # from expiring due to inactivity, and is the reliable way to actually
+  # run something on a schedule once the app isn't in the foreground
+  # (plain Dart Timers stop the moment Android suspends/kills the process).
+  workmanager: ^0.9.0+3
+
+  # Shows the running app version/build number in Settings.
+  package_info_plus: ^10.2.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  # The "flutter_lints" package below contains a set of recommended lints to
+  # encourage good coding practices. The lint set provided by the package is
+  # activated in the `analysis_options.yaml` file located at the root of your
+  # package. See that file for information about deactivating specific lint
+  # rules and activating additional ones.
+  flutter_lints: ^6.0.0
+
+# Vendored fork of desktop_webview_window 0.3.0 with a one-line fix to its
+# Linux "create" (popup) signal handler, which otherwise crashes the whole
+# process (WebCore::WindowFeatures assertion) the instant a page opens any
+# popup -- including Google's OAuth "Sign in with Google" button. See
+# third_party/desktop_webview_window/linux/webview_window.cc for the patch
+# and README.md for the full story.
+dependency_overrides:
+  desktop_webview_window:
+    path: third_party/desktop_webview_window
+  tray_manager:
+    path: third_party/tray_manager
+
+# For information on the generic Dart part of this file, see the
+# following page: https://dart.dev/tools/pub/pubspec
+
+# The following section is specific to Flutter packages.
+flutter:
+  generate: true
+
+  # The following line ensures that the Material Icons font is
+  # included with your application, so that you can use the icons in
+  # the material Icons class.
+  uses-material-design: true
+
+  assets:
+    - assets/icon/
+
+  # An image asset can refer to one or more resolution-specific "variants", see
+  # https://flutter.dev/to/resolution-aware-images
+
+  # For details regarding adding assets from package dependencies, see
+  # https://flutter.dev/to/asset-from-package
+
+  # To add custom fonts to your application, add a fonts section here,
+  # in this "flutter" section. Each entry in this list should have a
+  # "family" key with the font family name, and a "fonts" key with a
+  # list giving the asset and other descriptors for the font. For
+  # example:
+  # fonts:
+  #   - family: Schyler
+  #     fonts:
+  #       - asset: fonts/Schyler-Regular.ttf
+  #       - asset: fonts/Schyler-Italic.ttf
+  #         style: italic
+  #   - family: Trajan Pro
+  #     fonts:
+  #       - asset: fonts/TrajanPro.ttf
+  #       - asset: fonts/TrajanPro_Bold.ttf
+  #         weight: 700
+  #
+  # For details regarding fonts from package dependencies,
+  # see https://flutter.dev/to/font-from-package

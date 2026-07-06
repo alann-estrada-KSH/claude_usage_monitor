@@ -1,0 +1,215 @@
+{
+  "@@locale": "en",
+  "appTitle": "Claude Usage Monitor",
+  "dashboardTitle": "Usage Monitor",
+  "settingsTooltip": "Settings",
+  "focusModeTooltip": "Focus mode (full screen)",
+  "trayTooltipLine": "{label} · Session {five}% / Weekly {weekly}%",
+  "@trayTooltipLine": {
+    "placeholders": {
+      "label": {"type": "String"},
+      "five": {"type": "String"},
+      "weekly": {"type": "String"}
+    }
+  },
+  "trayShowHide": "Show/Hide",
+  "trayRefreshNow": "Refresh now",
+  "trayQuit": "Quit",
+  "addAccountTooltip": "Add account",
+  "emptyStateTitle": "No accounts yet",
+  "emptyStateBody": "Add a Claude.ai account to start tracking its 5-hour and weekly usage limits.",
+  "addAccountButton": "Add account",
+  "nameAccountDialogTitle": "Name this account",
+  "nameAccountHint": "e.g. Work, Personal",
+  "cancel": "Cancel",
+  "continueToLogin": "Continue to login",
+  "refreshNowTooltip": "Refresh now",
+  "removeAccountTooltip": "Remove account",
+  "renameAccountTooltip": "Rename account",
+  "renameAccountDialogTitle": "Rename this account",
+  "save": "Save",
+  "noUsageDataYet": "No usage data yet.",
+  "usageDataUnavailable": "Usage data not available ({reason})",
+  "@usageDataUnavailable": {
+    "placeholders": {
+      "reason": {"type": "String"}
+    }
+  },
+  "unknownReason": "unknown reason",
+  "sessionExpiredMessage": "Session expired.",
+  "reconnectButton": "Reconnect",
+  "fiveHourWindow": "Session",
+  "weeklyWindow": "Weekly limit",
+  "updatedAgo": "Updated {time}",
+  "@updatedAgo": {
+    "placeholders": {
+      "time": {"type": "String"}
+    }
+  },
+  "justNow": "just now",
+  "minutesAgo": "{minutes}m ago",
+  "@minutesAgo": {
+    "placeholders": {
+      "minutes": {"type": "int"}
+    }
+  },
+  "hoursAgo": "{hours}h ago",
+  "@hoursAgo": {
+    "placeholders": {
+      "hours": {"type": "int"}
+    }
+  },
+  "daysAgo": "{days}d ago",
+  "@daysAgo": {
+    "placeholders": {
+      "days": {"type": "int"}
+    }
+  },
+  "resetsApprox": "Resets ~{time}",
+  "@resetsApprox": {
+    "placeholders": {
+      "time": {"type": "String"}
+    }
+  },
+  "resetNow": "now",
+  "resetInHoursMinutes": "in {hours}h {minutes}m",
+  "@resetInHoursMinutes": {
+    "placeholders": {
+      "hours": {"type": "int"},
+      "minutes": {"type": "int"}
+    }
+  },
+  "resetInMinutes": "in {minutes}m",
+  "@resetInMinutes": {
+    "placeholders": {
+      "minutes": {"type": "int"}
+    }
+  },
+  "resetInDays": "in {days}d",
+  "@resetInDays": {
+    "placeholders": {
+      "days": {"type": "int"}
+    }
+  },
+  "today": "Today",
+  "tomorrow": "Tomorrow",
+  "removeAccountDialogTitle": "Remove account?",
+  "removeAccountDialogBody": "This removes \"{label}\" from the dashboard. It does not log you out of claude.ai.",
+  "@removeAccountDialogBody": {
+    "placeholders": {
+      "label": {"type": "String"}
+    }
+  },
+  "remove": "Remove",
+  "loginPageTitle": "Sign in to Claude.ai",
+  "loginDone": "Done",
+  "loginBanner": "Log in below, then tap \"Done\" once you land on your Claude chat screen. Nothing you type here leaves this device.",
+  "loginDesktopHint": "A separate login window has opened. Log in there, then come back here and tap \"Done\".",
+  "settingsPageTitle": "Settings",
+  "offlineMessage": "No internet connection -- refreshes paused until it's back.",
+  "statusUnknown": "Claude status unknown (couldn't reach status.claude.com)",
+  "statusChecking": "Checking Claude status...",
+  "statusSection": "Claude status refresh",
+  "statusPageTitle": "Claude status",
+  "statusLastChecked": "Last checked: {time}",
+  "@statusLastChecked": {
+    "placeholders": {
+      "time": {"type": "String"}
+    }
+  },
+  "statusIncidentsTitle": "Unresolved incidents",
+  "statusNoIncidents": "None reported.",
+  "refreshIntervalSection": "Refresh interval",
+  "refreshIntervalDescription": "How often to reload claude.ai/settings/usage in the background. Minimum {seconds}s to avoid hammering the site.",
+  "@refreshIntervalDescription": {
+    "placeholders": {
+      "seconds": {"type": "int"}
+    }
+  },
+  "appearanceSection": "Appearance",
+  "themeSystem": "System",
+  "themeLight": "Light",
+  "themeDark": "Dark",
+  "accentColorSection": "Accent color",
+  "fontSection": "Font",
+  "fontMonospace": "Monospace",
+  "fontComicSans": "Comic Sans",
+  "fontConsolas": "Consolas",
+  "fontCourierNew": "Courier New",
+  "fontGeorgia": "Georgia",
+  "languageSection": "Language",
+  "languageSystem": "System",
+  "languageEnglish": "English",
+  "languageSpanish": "Español",
+  "timeFormatSection": "Time format",
+  "timeFormat12h": "12h",
+  "timeFormat24h": "24h",
+  "focusModeAccountsSection": "Accounts shown in focus mode",
+  "thresholdsSection": "Usage color thresholds",
+  "thresholdWarning": "Warning at {percent}%",
+  "@thresholdWarning": {
+    "placeholders": {
+      "percent": {"type": "int"}
+    }
+  },
+  "thresholdCritical": "Critical at {percent}%",
+  "@thresholdCritical": {
+    "placeholders": {
+      "percent": {"type": "int"}
+    }
+  },
+  "diagnosticsSection": "Diagnostics",
+  "diagnosticsBackend": "WebView backend on this platform: {backend}",
+  "@diagnosticsBackend": {
+    "placeholders": {
+      "backend": {"type": "String"}
+    }
+  },
+  "diagnosticsBackendAndroid": "flutter_inappwebview (embedded WebView)",
+  "diagnosticsBackendDesktop": "desktop_webview_window (webkit2gtk / WebView2)",
+  "diagnosticsRunning": "Scraping...",
+  "diagnosticsRunButton": "Run scrape now for all accounts",
+  "diagnosticsNoAccounts": "No accounts to diagnose yet.",
+  "diagnosticsNeverScraped": "Never scraped",
+  "diagnosticsParsedOk": "Parsed OK",
+  "diagnosticsParseFailed": "Parse failed",
+  "diagnosticsFetchedAt": "Fetched at",
+  "diagnosticsFiveHourPercent": "5-hour %",
+  "diagnosticsFiveHourReset": "5-hour reset",
+  "diagnosticsWeeklyPercent": "Weekly %",
+  "diagnosticsWeeklyReset": "Weekly reset",
+  "diagnosticsParseError": "Parse error",
+  "diagnosticsRawPageText": "Raw API response",
+  "diagnosticsCopyRawText": "Copy",
+  "debugModeSection": "Debug mode",
+  "debugModeToggle": "Show notification log and test tools",
+  "debugPanelSection": "Debug",
+  "debugSendTestNotification": "Send test notification",
+  "debugTestNotificationTitle": "Test notification",
+  "debugTestNotificationBody": "If you see this, notifications are working.",
+  "debugSendScheduledTestNotification": "Send scheduled test notification (15s)",
+  "debugScheduledTestNotificationBody": "If you see this, scheduled notifications work even in the background.",
+  "debugScheduledTestSent": "Scheduled -- it'll arrive in about 15 seconds.",
+  "keepAliveSection": "Keep session alive",
+  "keepAliveDescription": "Pings Claude periodically in the background (via WorkManager, battery-aware) to stop it logging you out from inactivity. 15-minute floor -- that's Android's own limit.",
+  "keepAliveToggle": "Keep session alive in the background",
+  "debugNotificationsEnabled": "Android notification permission granted: {status}",
+  "@debugNotificationsEnabled": {
+    "placeholders": {
+      "status": {"type": "String"}
+    }
+  },
+  "debugYes": "yes",
+  "debugNo": "no",
+  "debugNotificationLog": "Notification log (already-fired keys)",
+  "debugNotificationLogEmpty": "Nothing logged yet.",
+  "resetSection": "Reset",
+  "resetDescription": "Resets all settings (intervals, theme, accent color, font, thresholds, etc.) back to their original values. Doesn't touch your accounts or sessions.",
+  "resetButton": "Reset settings",
+  "resetDialogTitle": "Reset settings?",
+  "resetDialogBody": "This will restore all preferences to their original values. This can't be undone.",
+  "reset": "Reset",
+  "resetDone": "Settings reset.",
+  "creditsLine": "Made by Alann Estrada -- github.com/alannnn-estrada",
+  "aboutFooter": "Unofficial tool, not affiliated with or endorsed by Anthropic. 100% local: no telemetry, no analytics, cookies never leave this device."
+}
