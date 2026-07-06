@@ -3,6 +3,15 @@
          granted at runtime (see NotificationService.init(), which calls
          requestNotificationsPermission()) before any notification shows. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- Flutter's default template only puts this in the debug/profile
+         manifests (see android/app/src/debug/AndroidManifest.xml), on the
+         assumption that a release app opts in itself if it needs network
+         access. Every debug/adb install this whole project was built and
+         tested with had it implicitly, masking that the actual Play Store
+         release build had NO network access at all: every claude.ai
+         request, the status check, and the Android keep-alive ping all
+         failed silently until this was added here. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <!-- Required for flutter_local_notifications' zonedSchedule: since
          v16 the plugin no longer auto-declares its own receivers, so a
          scheduled notification's AlarmManager broadcast has nothing to
