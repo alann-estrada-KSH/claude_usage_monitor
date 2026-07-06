@@ -30,7 +30,7 @@
 <body>
 
 <h1>Privacy Policy — Claude Usage Monitor</h1>
-<p class="updated">Last updated: July 6, 2026</p>
+<p class="updated">Last updated: July 6, 2026 (v1.1.2)</p>
 
 <p>
 Claude Usage Monitor is an unofficial, independent tool. It is
@@ -50,10 +50,21 @@ this app, no analytics, and no advertising.
 <ul>
   <li>You log in to claude.ai through a real, native WebView — the same login
     flow you'd use in a browser.</li>
-  <li>The resulting session cookie is stored by the operating system's own
-    WebView engine (Android WebView, or the OS-native WebView on
-    Linux/Windows). <strong>This app never reads, copies, exports, or
-    transmits that cookie to any server it controls.</strong></li>
+  <li><strong>On Linux and Windows</strong>, the resulting session cookie is
+    stored by the operating system's own WebView engine, isolated per
+    account. This app never reads, copies, exports, or transmits that
+    cookie to any server it controls.</li>
+  <li><strong>On Android</strong>, the system WebView has only one shared
+    cookie store with no per-account isolation at all (a platform
+    limitation, not a choice this app made). To support more than one
+    Claude.ai account, the app captures that session's cookie once, right
+    after you finish logging in, and stores it in Android's
+    Keystore-backed encrypted storage (the same OS-provided mechanism apps
+    use for passwords/tokens) so each account's session stays separate on
+    your device. This snapshot is still <strong>never transmitted anywhere
+    except claude.ai itself</strong> — it's simply read from local
+    encrypted storage instead of the shared WebView jar when the app checks
+    that account's usage.</li>
   <li>On a timer, the app uses that existing session to call claude.ai's own
     usage-data endpoint and read your 5-hour/weekly usage percentages. This
     traffic goes directly from your device to claude.ai, the same as if you
@@ -69,11 +80,14 @@ this app, no analytics, and no advertising.
     thresholds, etc).</li>
   <li>A small log of which notifications have already fired, so you don't
     get duplicate alerts.</li>
+  <li><strong>Android only:</strong> each account's session cookie snapshot
+    (see above), in Keystore-backed encrypted storage rather than the
+    plain local database used for everything else on this list.</li>
 </ul>
 <p>
 All of this is stored only on your own device (via Hive, a local
-key-value store) and is never uploaded anywhere. Uninstalling the app
-deletes it.
+key-value store, or Android's encrypted storage for the item noted above)
+and is never uploaded anywhere. Uninstalling the app deletes it.
 </p>
 
 <h2>Notifications</h2>
