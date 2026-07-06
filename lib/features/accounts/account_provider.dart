@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../../core/models/claude_account.dart';
 import '../../core/models/usage_history_point.dart';
 import '../../core/notifications/usage_alert_service.dart';
+import '../../core/scraping/android_account_cookie_store.dart';
 import '../../core/scraping/usage_scraper.dart';
 import '../../core/storage/account_store.dart';
 import '../../core/storage/usage_history_store.dart';
@@ -13,15 +14,18 @@ class AccountProvider extends ChangeNotifier {
     UsageScraper? scraper,
     UsageAlertService? alerts,
     UsageHistoryStore? history,
+    AndroidAccountCookieStore? androidCookies,
   })  : _store = store ?? AccountStore(),
         _scraper = scraper ?? UsageScraper(),
         _alerts = alerts ?? UsageAlertService(),
-        _history = history ?? UsageHistoryStore();
+        _history = history ?? UsageHistoryStore(),
+        _androidCookies = androidCookies ?? const AndroidAccountCookieStore();
 
   final AccountStore _store;
   final UsageScraper _scraper;
   final UsageAlertService _alerts;
   final UsageHistoryStore _history;
+  final AndroidAccountCookieStore _androidCookies;
 
   List<ClaudeAccount> _accounts = [];
   List<ClaudeAccount> get accounts => List.unmodifiable(_accounts);
@@ -57,6 +61,7 @@ class AccountProvider extends ChangeNotifier {
   Future<void> removeAccount(String accountId) async {
     _accounts = _accounts.where((a) => a.id != accountId).toList();
     await _store.delete(accountId);
+    await _androidCookies.delete(accountId); // no-op if nothing was ever stored (desktop, or Android fallback path)
     await _ensureSomeAccountVisibleInFocusMode();
     notifyListeners();
   }

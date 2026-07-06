@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.1.2+4
+version: 1.1.3+5
 
 environment:
   sdk: ^3.12.2
@@ -82,6 +82,12 @@ dependencies:
 
   # File path joining for the Windows update downloader.
   path: ^1.9.1
+
+  # Android-only: real per-account cookie storage (see
+  # lib/core/scraping/android_account_cookie_store.dart for why this is
+  # needed at all -- android.webkit.CookieManager has no per-WebView
+  # isolation, unlike desktop's per-profile WebKitWebContext).
+  flutter_secure_storage: ^10.0.0
 
 dev_dependencies:
   flutter_test:

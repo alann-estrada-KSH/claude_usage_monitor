@@ -6,6 +6,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   connectivity_plus
   desktop_webview_window
   flutter_inappwebview_windows
+  flutter_secure_storage_windows
   screen_retriever_windows
   tray_manager
   window_manager

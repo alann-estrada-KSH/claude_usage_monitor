@@ -4,6 +4,7 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   desktop_webview_window
+  flutter_secure_storage_linux
   screen_retriever_linux
   tray_manager
   window_manager

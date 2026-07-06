@@ -119,7 +119,7 @@ detail.
 ### Linux build dependencies
 
 ```bash
-sudo apt install -y libwebkit2gtk-4.1-dev libsoup-3.0-dev libgtk-3-dev cmake ninja-build clang
+sudo apt install -y libwebkit2gtk-4.1-dev libsoup-3.0-dev libgtk-3-dev libsecret-1-dev cmake ninja-build clang
 ```
 
 **If Flutter is installed via `snap install --classic flutter`:** use `tool/flutter`
@@ -147,15 +147,18 @@ The durable fix is to stop using the Flutter *snap* for Linux desktop builds --
 install Flutter via the official git/tar.gz method instead. `tool/flutter`
 is a workaround for keeping the snap install working.
 
-## Current scope (phase 1)
+## Current scope
 
-This is the first milestone: single account, login flow, scraping, and a
-basic dashboard with two progress bars. Not yet implemented:
+Implemented: multi-account (isolated per account on Linux/Windows via a
+WebKitWebContext per profile; on Android, via an app-captured cookie
+snapshot in encrypted storage -- see the privacy policy for why Android
+needs a different approach), system tray (Linux/Windows), local
+notifications on threshold crossings, focus/fullscreen mode, Claude status
+integration, configurable themes/thresholds, and an Android background
+keep-alive ping to avoid session expiry.
 
-- Multi-account cookie isolation
-- System tray mode
-- Local notifications on threshold crossings
-- Fullscreen monitor mode
+Not implemented: iOS/macOS (no reason it couldn't work, just untested and
+unbuilt).
 
 ## Development
 

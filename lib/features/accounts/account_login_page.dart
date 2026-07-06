@@ -5,24 +5,30 @@ import 'package:desktop_webview_window/desktop_webview_window.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
+import '../../core/scraping/android_account_cookie_store.dart';
 import '../../core/scraping/desktop_webview_lock.dart';
 import '../../l10n/app_localizations.dart';
 
 /// Shows the real claude.ai login page so the user can sign in normally.
-/// Session cookies land in the platform's persistent WebView cookie store as
-/// a side effect -- this screen never reads or touches them directly.
+///
+/// On desktop, session cookies land in that account's own isolated
+/// WebKitWebContext as a side effect -- this screen never reads or touches
+/// them directly. Android has no equivalent per-WebView cookie isolation
+/// (see AndroidAccountCookieStore for why), so there this screen clears the
+/// shared cookie jar before login and captures+stores the result itself on
+/// Done -- still 100% local, never sent anywhere but claude.ai.
 ///
 /// Login completion is confirmed by the user tapping "Done" rather than by
 /// guessing Anthropic's auth redirect URLs, which can change without notice.
 class AccountLoginPage extends StatefulWidget {
   const AccountLoginPage({super.key, this.profile});
 
-  /// Desktop (Linux) only: partitions this login's cookies/storage into
-  /// their own on-disk WebKitWebContext (see third_party/desktop_webview_window)
-  /// instead of the shared default one -- so logging into a second account
-  /// doesn't overwrite the first one's session. Pass the target
-  /// [ClaudeAccount.id]. `null` falls back to the old shared-context
-  /// behavior (used to be the only behavior at all).
+  /// The target account's id. On desktop it picks that account's isolated
+  /// WebKitWebContext (see third_party/desktop_webview_window); on Android
+  /// it's the key under which the captured cookies get stored (see
+  /// AndroidAccountCookieStore). `null` falls back to the old
+  /// shared-context/no-capture behavior (used to be the only behavior at
+  /// all, before multi-account support existed).
   final String? profile;
 
   static const _loginUrl = 'https://claude.ai/login';
@@ -33,13 +39,25 @@ class AccountLoginPage extends StatefulWidget {
 
 class _AccountLoginPageState extends State<AccountLoginPage> {
   Webview? _desktopWebview;
+  static const _androidCookies = AndroidAccountCookieStore();
 
   @override
   void initState() {
     super.initState();
     if (!Platform.isAndroid) {
       _openDesktopLoginWindow();
+    } else {
+      _prepareAndroidLogin();
     }
+  }
+
+  Future<void> _prepareAndroidLogin() async {
+    // The shared CookieManager has no per-account isolation on Android (see
+    // AndroidAccountCookieStore) -- starting a new login without clearing
+    // it first would silently inherit whichever account's session happens
+    // to already be sitting there and capture the WRONG account's cookies
+    // on Done. Every login starts from a clean slate here.
+    await CookieManager.instance().deleteCookies(url: WebUri('https://claude.ai'));
   }
 
   Future<void> _openDesktopLoginWindow() async {
@@ -80,7 +98,7 @@ class _AccountLoginPageState extends State<AccountLoginPage> {
     });
   }
 
-  void _confirmDone() {
+  Future<void> _confirmDone() async {
     // Desktop: closing the native webview window fires onClose, which is
     // what actually pops this route (see _openDesktopLoginWindow) -- it
     // never runs on Android (initState only opens it `if
@@ -89,7 +107,17 @@ class _AccountLoginPageState extends State<AccountLoginPage> {
     // widget in this same route, not a separate window -- popping directly
     // is the equivalent "close" action.
     if (Platform.isAndroid) {
-      Navigator.of(context).pop(true);
+      final profile = widget.profile;
+      if (profile != null) {
+        // Capture now, while this account's session is still the only
+        // thing in the shared cookie jar (see _prepareAndroidLogin) --
+        // this snapshot is what UsageScraper reads from on Android from
+        // here on, not the shared jar (which the next login will clear).
+        final cookies = await CookieManager.instance().getCookies(url: WebUri('https://claude.ai'));
+        final header = cookies.map((c) => '${c.name}=${c.value}').join('; ');
+        if (header.isNotEmpty) await _androidCookies.save(profile, header);
+      }
+      if (mounted) Navigator.of(context).pop(true);
     } else {
       _desktopWebview?.close();
     }

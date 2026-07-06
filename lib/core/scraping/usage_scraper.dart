@@ -3,6 +3,7 @@ import 'dart:io' show Platform;
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
 import '../models/usage_snapshot.dart';
+import 'android_account_cookie_store.dart';
 import 'desktop_usage_fetcher.dart';
 import 'usage_api_client.dart';
 
@@ -14,34 +15,29 @@ import 'usage_api_client.dart';
 /// Read-only: never calls /v1/messages or any inference endpoint, never
 /// sends cookies or usage data anywhere off-device.
 ///
-/// Android reads cookies via flutter_inappwebview's CookieManager (backed by
-/// Android's persistent, app-wide cookie store -- no webview navigation
-/// needed). Linux/Windows use desktop_webview_window's getAllCookies, which
-/// needs a webview to have (at least started) loading a claude.ai page
-/// first -- see desktop_usage_fetcher.dart.
-///
-/// Multi-account cookie isolation (each account keeping its own claude.ai
-/// login) only exists on Linux/Windows (a per-account WebKitWebContext, see
-/// [fetchUsage]'s `profile` param). Android's native CookieManager is a
-/// single app-wide singleton with no per-WebView partitioning, so on Android
-/// today, adding a second account with a *different* claude.ai login would
-/// still overwrite the first one's session.
+/// Android reads the per-account snapshot AccountLoginPage captured at login
+/// time (see AndroidAccountCookieStore), falling back to
+/// flutter_inappwebview's shared CookieManager only if nothing was captured
+/// yet (e.g. an account created before this existed). Linux/Windows use
+/// desktop_webview_window's getAllCookies against that account's own
+/// isolated WebKitWebContext instead -- see desktop_usage_fetcher.dart.
 class UsageScraper {
   UsageScraper({this.timeout = const Duration(seconds: 20)});
 
   final Duration timeout;
 
   static const _apiClient = UsageApiClient();
+  static const _androidCookies = AndroidAccountCookieStore();
 
-  /// [profile] should be the account's own id on desktop, so cookies come
-  /// from that account's isolated WebKitWebContext rather than the shared
-  /// default one (see AccountLoginPage/desktop_usage_fetcher.dart). Ignored
-  /// on Android, which has no equivalent per-account cookie isolation --
-  /// see the note in usage_scraper's class doc.
+  /// [profile] should be the account's own id -- on desktop it picks that
+  /// account's isolated WebKitWebContext (see
+  /// AccountLoginPage/desktop_usage_fetcher.dart); on Android it looks up
+  /// that account's captured cookie snapshot (see
+  /// AndroidAccountCookieStore).
   Future<UsageSnapshot> fetchUsage({String? profile}) async {
     try {
       final cookieHeader = Platform.isAndroid
-          ? await _cookieHeaderAndroid()
+          ? await _cookieHeaderAndroid(profile)
           : await fetchCookieHeaderDesktop(timeout: timeout, profile: profile);
       if (cookieHeader.trim().isEmpty) {
         return UsageSnapshot.unavailable('No session cookies found -- log in first');
@@ -53,7 +49,14 @@ class UsageScraper {
     }
   }
 
-  Future<String> _cookieHeaderAndroid() async {
+  Future<String> _cookieHeaderAndroid(String? accountId) async {
+    if (accountId != null) {
+      final stored = await _androidCookies.read(accountId);
+      if (stored != null && stored.isNotEmpty) return stored;
+    }
+    // Fallback for an account created before per-account capture existed,
+    // or if nothing was ever captured -- reads whatever is currently in the
+    // shared jar, same as the old single-account-only behavior.
     final cookies = await CookieManager.instance().getCookies(
       url: WebUri('https://claude.ai'),
     );
