@@ -81,7 +81,18 @@ class _AccountLoginPageState extends State<AccountLoginPage> {
   }
 
   void _confirmDone() {
-    _desktopWebview?.close();
+    // Desktop: closing the native webview window fires onClose, which is
+    // what actually pops this route (see _openDesktopLoginWindow) -- it
+    // never runs on Android (initState only opens it `if
+    // (!Platform.isAndroid)`), so _desktopWebview stays null there and this
+    // button did nothing at all. Android's InAppWebView is just an embedded
+    // widget in this same route, not a separate window -- popping directly
+    // is the equivalent "close" action.
+    if (Platform.isAndroid) {
+      Navigator.of(context).pop(true);
+    } else {
+      _desktopWebview?.close();
+    }
   }
 
   @override
