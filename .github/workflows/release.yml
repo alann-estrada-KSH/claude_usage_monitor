@@ -85,7 +85,13 @@ jobs:
           keep_files: false
 
   build-windows:
-    runs-on: windows-latest
+    # Pinned, not windows-latest: flutter_inappwebview_windows (the Android
+    # webview plugin's Windows stub -- unused at runtime on Windows, since
+    # this app uses desktop_webview_window there, but still compiled since
+    # federated plugins build for every platform they implement) uses
+    # <experimental/coroutine>, which windows-latest's newer MSVC now hard
+    # errors on (STL1011). windows-2022's MSVC still accepts it.
+    runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
 
