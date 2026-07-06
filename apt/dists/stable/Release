@@ -1,0 +1,7 @@
+Origin: Claude Usage Monitor
+Label: Claude Usage Monitor
+Suite: stable
+Codename: stable
+Architectures: amd64
+Components: main
+Description: Unofficial Claude Usage Monitor apt repo (unsigned, [trusted=yes])

@@ -1,0 +1,16 @@
+Package: claude-usage-monitor
+Version: 1.1.0
+Architecture: amd64
+Maintainer: Alann Estrada <https://github.com/alannnn-estrada>
+Depends: libgtk-3-0, libwebkit2gtk-4.1-0, libayatana-appindicator3-1
+Filename: pool/main/claude-usage-monitor_1.1.0_amd64.deb
+Size: 9194768
+MD5sum: 2c530592f38937f3640425414a8126d7
+SHA1: b2d8c49ec6b8a4867a96daa4023a15b7629875e7
+SHA256: e65d6b171dec5ef928e4115aba16ef76381b493b4c8afcdb1b2e34281da61322
+Section: utils
+Priority: optional
+Description: Unofficial Claude.ai usage monitor
+ Shows Claude.ai's 5-hour and weekly usage limits from the system tray.
+ Unofficial, not affiliated with or endorsed by Anthropic.
+
