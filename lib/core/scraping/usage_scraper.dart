@@ -4,6 +4,7 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
 import '../models/usage_snapshot.dart';
 import 'android_account_cookie_store.dart';
+import 'android_usage_fetcher.dart';
 import 'desktop_usage_fetcher.dart';
 import 'usage_api_client.dart';
 
@@ -52,7 +53,14 @@ class UsageScraper {
   Future<String> _cookieHeaderAndroid(String? accountId) async {
     if (accountId != null) {
       final stored = await _androidCookies.read(accountId);
-      if (stored != null && stored.isNotEmpty) return stored;
+      if (stored != null && stored.isNotEmpty) {
+        // Refreshes the stored snapshot via a live page load first (see
+        // android_usage_fetcher.dart) -- a static snapshot captured once at
+        // login goes stale if claude.ai rotates its session cookie over
+        // time, which a plain read here can't detect or recover from.
+        final refreshed = await refreshAndroidCookieHeader(accountId, _androidCookies);
+        return refreshed.isNotEmpty ? refreshed : stored;
+      }
     }
     // Fallback for an account created before per-account capture existed,
     // or if nothing was ever captured -- reads whatever is currently in the

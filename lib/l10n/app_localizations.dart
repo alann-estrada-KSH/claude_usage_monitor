@@ -257,13 +257,13 @@ abstract class AppLocalizations {
   /// No description provided for @fiveHourWindow.
   ///
   /// In en, this message translates to:
-  /// **'Session'**
+  /// **'Session (5 hrs)'**
   String get fiveHourWindow;
 
   /// No description provided for @weeklyWindow.
   ///
   /// In en, this message translates to:
-  /// **'Weekly limit'**
+  /// **'Weekly limit (7 days)'**
   String get weeklyWindow;
 
   /// No description provided for @updatedAgo.

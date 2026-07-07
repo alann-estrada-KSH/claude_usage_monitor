@@ -37,7 +37,7 @@ class AccountProvider extends ChangeNotifier {
     await _store.init();
     await _alerts.init();
     await _history.init();
-    _accounts = _store.getAll();
+    _accounts = _store.getAll()..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
     notifyListeners();
   }
 
@@ -51,11 +51,33 @@ class AccountProvider extends ChangeNotifier {
       id: id ?? DateTime.now().microsecondsSinceEpoch.toString(),
       label: label,
       isLoggedIn: true,
+      // Appended at the end of the user's current order rather than 0 --
+      // new accounts otherwise jump to the front of the list/focus view on
+      // every reorder-sensitive screen, ahead of ones the user deliberately
+      // placed first.
+      sortOrder: _accounts.isEmpty ? 0 : _accounts.map((a) => a.sortOrder).reduce((a, b) => a > b ? a : b) + 1,
     );
     _accounts = [..._accounts, account];
     await _store.save(account);
     notifyListeners();
     return account;
+  }
+
+  /// Drag-to-reorder in Settings (see _FocusModeAccountsControl) -- persists
+  /// the new order so it survives restarts and is reflected everywhere
+  /// accounts are listed (dashboard, focus mode), not just in Settings.
+  Future<void> reorderAccounts(int oldIndex, int newIndex) async {
+    final reordered = [..._accounts];
+    if (oldIndex < newIndex) newIndex -= 1;
+    final moved = reordered.removeAt(oldIndex);
+    reordered.insert(newIndex, moved);
+    _accounts = [
+      for (var i = 0; i < reordered.length; i++) reordered[i].copyWith(sortOrder: i),
+    ];
+    notifyListeners();
+    for (final account in _accounts) {
+      await _store.save(account);
+    }
   }
 
   Future<void> removeAccount(String accountId) async {

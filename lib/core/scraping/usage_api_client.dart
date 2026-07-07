@@ -26,20 +26,36 @@ class UsageApiClient {
       if (orgs is! List || orgs.isEmpty) {
         return UsageSnapshot.unavailable('No organizations found for this account');
       }
-      final orgId = (orgs.first as Map)['uuid'] as String?;
-      if (orgId == null || orgId.isEmpty) {
+
+      // An account can belong to more than one organization (e.g. a
+      // personal workspace plus a team) -- claude.ai's own usage panel
+      // reflects whichever workspace you're actively chatting in, but a
+      // plain API call has no browsing session to infer that from.
+      // Confirmed live with a real multi-org account: the *first* org in
+      // this list was a personal workspace that had never been used
+      // (0%/0%), while the second, a team workspace, held the account's
+      // real usage (7%/41%) -- trusting list order alone silently showed
+      // the wrong workspace. Checking every org and keeping the first one
+      // that actually shows activity is the only reliable signal available.
+      Map<String, dynamic>? fallback;
+      for (final org in orgs) {
+        final uuid = (org as Map)['uuid'] as String?;
+        if (uuid == null || uuid.isEmpty) continue;
+        final usage = await _getJson(
+          client,
+          Uri.parse('https://claude.ai/api/organizations/$uuid/usage'),
+          cookieHeader,
+        ) as Map<String, dynamic>;
+        fallback ??= usage;
+        if (_hasActivity(usage)) return _parseUsage(usage);
+      }
+      if (fallback == null) {
         return UsageSnapshot.unavailable(
           'Organization UUID missing from API response',
           rawPageText: jsonEncode(orgs),
         );
       }
-
-      final usage = await _getJson(
-        client,
-        Uri.parse('https://claude.ai/api/organizations/$orgId/usage'),
-        cookieHeader,
-      );
-      return _parseUsage(usage as Map<String, dynamic>);
+      return _parseUsage(fallback);
     } on _ApiHttpException catch (e) {
       if (e.statusCode == 401 || e.statusCode == 403) {
         return UsageSnapshot.unavailable(
@@ -79,6 +95,12 @@ class UsageApiClient {
   }
 
   DateTime? _parseIso(String? raw) => raw == null ? null : DateTime.tryParse(raw)?.toLocal();
+
+  bool _hasActivity(Map<String, dynamic> usage) {
+    final fiveHour = (usage['five_hour'] as Map?)?['utilization'] as num?;
+    final sevenDay = (usage['seven_day'] as Map?)?['utilization'] as num?;
+    return (fiveHour != null && fiveHour > 0) || (sevenDay != null && sevenDay > 0);
+  }
 }
 
 class _ApiHttpException implements Exception {

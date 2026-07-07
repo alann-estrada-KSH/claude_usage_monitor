@@ -35,8 +35,11 @@ class UsageBar extends StatelessWidget {
     final labelStyle = large
         ? Theme.of(context).textTheme.titleMedium
         : Theme.of(context).textTheme.bodyMedium;
+    // headlineSmall, not displaySmall -- focus mode's percentages (the only
+    // `large` caller) read as oversized/cartoonish at display scale on a
+    // phone screen; still clearly the focal number, just not screen-filling.
     final percentStyle = (large
-            ? Theme.of(context).textTheme.displaySmall
+            ? Theme.of(context).textTheme.headlineSmall
             : Theme.of(context).textTheme.bodyMedium)
         ?.copyWith(fontWeight: FontWeight.w700);
 

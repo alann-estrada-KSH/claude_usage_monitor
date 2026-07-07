@@ -38,8 +38,8 @@
   "unknownReason": "unknown reason",
   "sessionExpiredMessage": "Session expired.",
   "reconnectButton": "Reconnect",
-  "fiveHourWindow": "Session",
-  "weeklyWindow": "Weekly limit",
+  "fiveHourWindow": "Session (5 hrs)",
+  "weeklyWindow": "Weekly limit (7 days)",
   "updatedAgo": "Updated {time}",
   "@updatedAgo": {
     "placeholders": {

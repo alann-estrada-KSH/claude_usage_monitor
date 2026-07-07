@@ -510,16 +510,24 @@ class _FocusModeAccountsControl extends StatelessWidget {
     if (provider.accounts.isEmpty) {
       return Text(l10n.diagnosticsNoAccounts, style: Theme.of(context).textTheme.bodySmall);
     }
-    return Column(
-      mainAxisSize: MainAxisSize.min,
+    return ReorderableListView(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      buildDefaultDragHandles: false,
+      onReorder: provider.reorderAccounts,
       children: [
         for (final account in provider.accounts)
           CheckboxListTile(
+            key: ValueKey(account.id),
             contentPadding: EdgeInsets.zero,
             controlAffinity: ListTileControlAffinity.leading,
             title: Text(account.label),
             value: account.showInFocusMode,
             onChanged: (value) => provider.setShowInFocusMode(account.id, value ?? true),
+            secondary: ReorderableDragStartListener(
+              index: provider.accounts.indexOf(account),
+              child: const Icon(Icons.drag_handle),
+            ),
           ),
       ],
     );

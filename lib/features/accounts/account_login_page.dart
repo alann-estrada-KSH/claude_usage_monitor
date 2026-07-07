@@ -6,8 +6,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
 import '../../core/scraping/android_account_cookie_store.dart';
+import '../../core/scraping/android_cookie_jar_lock.dart';
 import '../../core/scraping/desktop_webview_lock.dart';
 import '../../l10n/app_localizations.dart';
+
+/// Chrome-for-Android UA with the "; wv)" WebView marker stripped. Google's
+/// OAuth login blocks with `disallowed_useragent` the instant it sees that
+/// marker (a documented anti-embedded-webview policy), regardless of
+/// whether the popup opens in a new window or loads in the same view --
+/// confirmed live: the same "load the popup URL in this view" approach that
+/// works fine on Linux's WebKitGTK window fails on Android specifically
+/// because of this UA fingerprint, not the popup handling itself. This is
+/// the standard, widely-used workaround; still just a fingerprint tweak, it
+/// can stop working if Google's detection changes.
+const _androidLoginUserAgent =
+    'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 '
+    '(KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36';
 
 /// Shows the real claude.ai login page so the user can sign in normally.
 ///
@@ -41,6 +55,44 @@ class _AccountLoginPageState extends State<AccountLoginPage> {
   Webview? _desktopWebview;
   static const _androidCookies = AndroidAccountCookieStore();
 
+  // _confirmDone does real async work now (cookie capture) before popping,
+  // where it used to be instant -- a quick double-tap on Done fired it
+  // twice concurrently and the second Navigator.pop() landed while the
+  // first was still resolving, crashing with the Navigator's own
+  // '!_debugLocked' reentrancy assertion (confirmed live on-device).
+  bool _confirming = false;
+
+  // Gates mounting the InAppWebView itself. initState can't be awaited, so
+  // build() used to run synchronously right after it and mount the webview
+  // (with initialUrlRequest already pointed at claude.ai/login) immediately
+  // -- starting navigation, and racing, the still-in-flight cookie/storage
+  // clear below. Confirmed live: the old account's session routinely won
+  // that race, landing straight on its chat screen before the clear ever
+  // finished. Not mounting the webview at all until the clear is done
+  // removes the race instead of trying to win it.
+  bool _androidReadyToLoad = false;
+
+  // Google's OAuth popup ("Sign in with Google" calls window.open()) --
+  // confirmed live: the request flutter_inappwebview's onCreateWindow hands
+  // over at popup-creation time is just claude.ai's own placeholder icon
+  // (https://claude.ai/images/google.svg), not the OAuth URL. claude.ai
+  // opens a blank/placeholder popup immediately (the standard trick to
+  // dodge popup blockers) and only navigates *that popup* to the real
+  // Google URL a moment later via JS. Loading the placeholder request's URL
+  // into the main view (the old approach) hijacks the wrong content and
+  // leaves the real OAuth navigation with nowhere to land -- exactly the
+  // "just a tiny G icon, nothing else" symptom seen live. A real popup
+  // WebView bound to the same windowId is what lets that later JS
+  // navigation actually go somewhere.
+  CreateWindowAction? _googlePopupRequest;
+
+  // Held from the moment this screen starts clearing the shared jar until
+  // it's disposed (Done, back-press, anything) -- see AndroidCookieJarLock.
+  // Without this, the background usage-refresh (android_usage_fetcher.dart)
+  // firing on its ~90s timer mid-login would clear/repopulate the same
+  // shared jar this screen is actively using, corrupting both.
+  void Function()? _releaseAndroidLock;
+
   @override
   void initState() {
     super.initState();
@@ -52,12 +104,25 @@ class _AccountLoginPageState extends State<AccountLoginPage> {
   }
 
   Future<void> _prepareAndroidLogin() async {
+    _releaseAndroidLock = await AndroidCookieJarLock.acquire();
     // The shared CookieManager has no per-account isolation on Android (see
     // AndroidAccountCookieStore) -- starting a new login without clearing
     // it first would silently inherit whichever account's session happens
     // to already be sitting there and capture the WRONG account's cookies
     // on Done. Every login starts from a clean slate here.
-    await CookieManager.instance().deleteCookies(url: WebUri('https://claude.ai'));
+    //
+    // deleteAllCookies() (app-wide), not the URL-scoped deleteCookies(url:)
+    // this used to call -- claude.ai's session cookie may be scoped to a
+    // dot-domain (.claude.ai) that an exact-URL match doesn't reliably hit.
+    await CookieManager.instance().deleteAllCookies();
+    // claude.ai also recognizes a returning session via localStorage/
+    // IndexedDB, not just the cookie -- confirmed live on-device: clearing
+    // only the cookie still landed straight on the chat screen for a
+    // *different* account's login attempt, skipping the login form
+    // entirely. This wipes WebView-wide local storage; safe here since
+    // this WebView only ever navigates to claude.ai.
+    await WebStorageManager.instance().deleteAllData();
+    if (mounted) setState(() => _androidReadyToLoad = true);
   }
 
   Future<void> _openDesktopLoginWindow() async {
@@ -99,33 +164,41 @@ class _AccountLoginPageState extends State<AccountLoginPage> {
   }
 
   Future<void> _confirmDone() async {
-    // Desktop: closing the native webview window fires onClose, which is
-    // what actually pops this route (see _openDesktopLoginWindow) -- it
-    // never runs on Android (initState only opens it `if
-    // (!Platform.isAndroid)`), so _desktopWebview stays null there and this
-    // button did nothing at all. Android's InAppWebView is just an embedded
-    // widget in this same route, not a separate window -- popping directly
-    // is the equivalent "close" action.
-    if (Platform.isAndroid) {
-      final profile = widget.profile;
-      if (profile != null) {
-        // Capture now, while this account's session is still the only
-        // thing in the shared cookie jar (see _prepareAndroidLogin) --
-        // this snapshot is what UsageScraper reads from on Android from
-        // here on, not the shared jar (which the next login will clear).
-        final cookies = await CookieManager.instance().getCookies(url: WebUri('https://claude.ai'));
-        final header = cookies.map((c) => '${c.name}=${c.value}').join('; ');
-        if (header.isNotEmpty) await _androidCookies.save(profile, header);
+    if (_confirming) return;
+    _confirming = true;
+    try {
+      // Desktop: closing the native webview window fires onClose, which is
+      // what actually pops this route (see _openDesktopLoginWindow) -- it
+      // never runs on Android (initState only opens it `if
+      // (!Platform.isAndroid)`), so _desktopWebview stays null there and
+      // this button did nothing at all. Android's InAppWebView is just an
+      // embedded widget in this same route, not a separate window --
+      // popping directly is the equivalent "close" action.
+      if (Platform.isAndroid) {
+        final profile = widget.profile;
+        if (profile != null) {
+          // Capture now, while this account's session is still the only
+          // thing in the shared cookie jar (see _prepareAndroidLogin) --
+          // this snapshot is what UsageScraper reads from on Android from
+          // here on, not the shared jar (which the next login will clear).
+          final cookies = await CookieManager.instance().getCookies(url: WebUri('https://claude.ai'));
+          final header = cookies.map((c) => '${c.name}=${c.value}').join('; ');
+          if (header.isNotEmpty) await _androidCookies.save(profile, header);
+        }
+        if (mounted) Navigator.of(context).pop(true);
+      } else {
+        _desktopWebview?.close();
       }
-      if (mounted) Navigator.of(context).pop(true);
-    } else {
-      _desktopWebview?.close();
+    } finally {
+      _confirming = false;
     }
   }
 
   @override
   void dispose() {
     _desktopWebview?.close();
+    _releaseAndroidLock?.call();
+    _releaseAndroidLock = null;
     super.dispose();
   }
 
@@ -151,28 +224,80 @@ class _AccountLoginPageState extends State<AccountLoginPage> {
   }
 
   Widget _buildAndroidWebView(AppLocalizations l10n) {
-    return Column(
+    if (!_androidReadyToLoad) {
+      // Cookie/storage clear (see _prepareAndroidLogin) still in flight --
+      // must not mount InAppWebView yet, since its initialUrlRequest starts
+      // loading claude.ai the instant it's built, racing the clear.
+      return const Center(child: CircularProgressIndicator());
+    }
+    return Stack(
       children: [
-        _LoginBanner(text: l10n.loginBanner),
-        Expanded(
-          child: InAppWebView(
-            initialUrlRequest: URLRequest(url: WebUri(AccountLoginPage._loginUrl)),
-            initialSettings: InAppWebViewSettings(
-              javaScriptEnabled: true,
-              supportMultipleWindows: true,
-              javaScriptCanOpenWindowsAutomatically: true,
+        Column(
+          children: [
+            _LoginBanner(text: l10n.loginBanner),
+            Expanded(
+              child: InAppWebView(
+                initialUrlRequest: URLRequest(url: WebUri(AccountLoginPage._loginUrl)),
+                initialSettings: InAppWebViewSettings(
+                  javaScriptEnabled: true,
+                  supportMultipleWindows: true,
+                  javaScriptCanOpenWindowsAutomatically: true,
+                  userAgent: _androidLoginUserAgent,
+                ),
+                // Real popup, not a same-view redirect -- see
+                // _googlePopupRequest's doc comment for why a same-view
+                // loadUrl(request.request.url) doesn't work here.
+                onCreateWindow: (controller, request) async {
+                  setState(() => _googlePopupRequest = request);
+                  return true;
+                },
+              ),
             ),
-            // Google's OAuth "Sign in with Google" opens via window.open();
-            // without handling this it silently no-ops on Android WebView.
-            // Load the popup target in the same webview instead.
-            onCreateWindow: (controller, request) async {
-              final url = request.request.url;
-              if (url != null) await controller.loadUrl(urlRequest: URLRequest(url: url));
-              return true;
-            },
-          ),
+          ],
         ),
+        if (_googlePopupRequest != null) _buildGooglePopup(),
       ],
+    );
+  }
+
+  Widget _buildGooglePopup() {
+    return Positioned.fill(
+      child: Material(
+        child: Column(
+          children: [
+            SafeArea(
+              bottom: false,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: IconButton(
+                  icon: const Icon(Icons.close),
+                  // The user backing out of the Google popup shouldn't be
+                  // stuck -- closing it just returns to the claude.ai tab
+                  // underneath, where "Continue with email" still works.
+                  onPressed: () => setState(() => _googlePopupRequest = null),
+                ),
+              ),
+            ),
+            Expanded(
+              child: InAppWebView(
+                windowId: _googlePopupRequest!.windowId,
+                initialSettings: InAppWebViewSettings(
+                  javaScriptEnabled: true,
+                  userAgent: _androidLoginUserAgent,
+                ),
+                // Google's OAuth flow closes its own popup (window.close())
+                // once it's done redirecting back to claude.ai -- the same
+                // shared CookieManager jar means the session it set is
+                // already visible to the claude.ai tab underneath once this
+                // closes, no extra plumbing needed.
+                onCloseWindow: (controller) {
+                  if (mounted) setState(() => _googlePopupRequest = null);
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

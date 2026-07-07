@@ -92,10 +92,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get reconnectButton => 'Reconectar';
 
   @override
-  String get fiveHourWindow => 'Sesión';
+  String get fiveHourWindow => 'Sesión (5 hrs)';
 
   @override
-  String get weeklyWindow => 'Límite semanal';
+  String get weeklyWindow => 'Límite semanal (7 días)';
 
   @override
   String updatedAgo(String time) {

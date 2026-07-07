@@ -10,6 +10,7 @@ class ClaudeAccount {
     this.lastFetchedAt,
     this.isLoggedIn = false,
     this.showInFocusMode = true,
+    this.sortOrder = 0,
   });
 
   final String id;
@@ -23,12 +24,18 @@ class ClaudeAccount {
   /// distraction-free view.
   final bool showInFocusMode;
 
+  /// Display order everywhere accounts are listed (dashboard, focus mode,
+  /// settings) -- lower first. User-reorderable via drag in Settings; see
+  /// AccountProvider.reorderAccounts.
+  final int sortOrder;
+
   ClaudeAccount copyWith({
     String? label,
     UsageSnapshot? lastKnownUsage,
     DateTime? lastFetchedAt,
     bool? isLoggedIn,
     bool? showInFocusMode,
+    int? sortOrder,
   }) {
     return ClaudeAccount(
       id: id,
@@ -37,6 +44,7 @@ class ClaudeAccount {
       lastFetchedAt: lastFetchedAt ?? this.lastFetchedAt,
       isLoggedIn: isLoggedIn ?? this.isLoggedIn,
       showInFocusMode: showInFocusMode ?? this.showInFocusMode,
+      sortOrder: sortOrder ?? this.sortOrder,
     );
   }
 
@@ -47,6 +55,7 @@ class ClaudeAccount {
         'lastFetchedAt': lastFetchedAt?.toIso8601String(),
         'isLoggedIn': isLoggedIn,
         'showInFocusMode': showInFocusMode,
+        'sortOrder': sortOrder,
       };
 
   factory ClaudeAccount.fromJson(Map<String, dynamic> json) {
@@ -62,6 +71,7 @@ class ClaudeAccount {
           : null,
       isLoggedIn: json['isLoggedIn'] as bool? ?? false,
       showInFocusMode: json['showInFocusMode'] as bool? ?? true,
+      sortOrder: json['sortOrder'] as int? ?? 0,
     );
   }
 }
