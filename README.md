@@ -65,7 +65,7 @@ just grab the `.deb` from Releases instead.
 and run it, or use Settings > Updates inside the app once installed --
 it checks GitHub Releases, downloads, and runs the installer for you.
 
-**Android:** not distributed anywhere (no Play Store listing) -- build and
+**Android:** available on Google Play. You can also build and
 `flutter install` it yourself, or sideload the debug/release APK.
 
 ### Vendored patches: `desktop_webview_window` on Linux
