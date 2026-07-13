@@ -50,7 +50,7 @@ with a Linux `.deb` and a Windows installer.
 **Linux (apt):**
 
 ```bash
-echo "deb [trusted=yes] https://alann-estrada-ksh.github.io/claude_usage_monitor/apt stable main" \
+echo "deb [trusted=yes arch=amd64] https://alann-estrada-ksh.github.io/claude_usage_monitor/apt stable main" \
   | sudo tee /etc/apt/sources.list.d/claude-usage-monitor.list
 sudo apt update
 sudo apt install claude-usage-monitor
