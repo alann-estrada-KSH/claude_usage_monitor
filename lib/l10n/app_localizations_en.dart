@@ -78,10 +78,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get startCounting => 'Write a message to start counting';
 
   @override
-  String get noUsageDataYet => 'No usage data yet.';
+  String get cachedDataWarning =>
+      'Showing cached data — the last refresh failed.';
 
   @override
-  String get cachedDataWarning => 'Update failed · Showing cached data';
+  String get noUsageDataYet => 'No usage data yet.';
 
   @override
   String usageDataUnavailable(String reason) {

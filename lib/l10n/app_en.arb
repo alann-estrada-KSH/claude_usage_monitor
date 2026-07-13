@@ -29,6 +29,7 @@
   "renameAccountDialogTitle": "Rename this account",
   "save": "Save",
   "startCounting": "Write a message to start counting",
+  "cachedDataWarning": "Showing cached data — the last refresh failed.",
   "noUsageDataYet": "No usage data yet.",
   "usageDataUnavailable": "Usage data not available ({reason})",
   "@usageDataUnavailable": {

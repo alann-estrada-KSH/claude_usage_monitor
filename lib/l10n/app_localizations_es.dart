@@ -78,10 +78,11 @@ class AppLocalizationsEs extends AppLocalizations {
   String get startCounting => 'Escribe un mensaje para empezar el conteo';
 
   @override
-  String get noUsageDataYet => 'Aún no hay datos de uso.';
+  String get cachedDataWarning =>
+      'Mostrando datos en caché — la última actualización falló.';
 
   @override
-  String get cachedDataWarning => 'Error al actualizar · Mostrando datos en caché';
+  String get noUsageDataYet => 'Aún no hay datos de uso.';
 
   @override
   String usageDataUnavailable(String reason) {

@@ -22,6 +22,7 @@
   "renameAccountDialogTitle": "Renombra esta cuenta",
   "save": "Guardar",
   "startCounting": "Escribe un mensaje para empezar el conteo",
+  "cachedDataWarning": "Mostrando datos en caché — la última actualización falló.",
   "noUsageDataYet": "Aún no hay datos de uso.",
   "usageDataUnavailable": "Datos de uso no disponibles ({reason})",
   "unknownReason": "razón desconocida",
