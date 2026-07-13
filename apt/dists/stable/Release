@@ -1,7 +1,20 @@
-Origin: Claude Usage Monitor
-Label: Claude Usage Monitor
-Suite: stable
-Codename: stable
 Architectures: amd64
+Codename: stable
 Components: main
+Date: Mon, 13 Jul 2026 16:45:38 +0000
 Description: Unofficial Claude Usage Monitor apt repo (unsigned, [trusted=yes])
+Label: Claude Usage Monitor
+Origin: Claude Usage Monitor
+Suite: stable
+MD5Sum:
+ f3252ae1cbfc6b45dfa165de771e310f              643 main/binary-amd64/Packages
+ 2a18bd726cd5a69083a1cdfb50105b32              463 main/binary-amd64/Packages.gz
+SHA1:
+ 11db7906842aec350798043fddb66c3ae7a8b8d3              643 main/binary-amd64/Packages
+ 633c222a98496a51f96152eb4d69c353c7aaf1d3              463 main/binary-amd64/Packages.gz
+SHA256:
+ 794e884dcd059791dbbaaa5f7f2f3c4381abc891bc59291fc6eca4aae42a0437              643 main/binary-amd64/Packages
+ 8fca8d696ed8dc3ecb31afb2becbf85904fd99da166b2a320d54934cd6914c43              463 main/binary-amd64/Packages.gz
+SHA512:
+ 010091c87d8342042a507dca78fdd74bc524f513f486bd311e84c348c4717e4763837a662b86779ebe6b33d48c9f73c89208cb14f6fcb4311fc15af8d62b5bac              643 main/binary-amd64/Packages
+ ea2703322789a59b363e8d44dd93251be579fe93d65645ba5034f4ccc859ab43f4581160e6e46ab9031d84040bb06d20e2881151d006fa1a9b667295cbad87a2              463 main/binary-amd64/Packages.gz
