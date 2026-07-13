@@ -61,6 +61,15 @@ class UsageBar extends StatelessWidget {
             l10n.resetsApprox(_relativeTime(context, l10n, resetAt!)),
             style: Theme.of(context).textTheme.bodySmall,
           ),
+        ] else if (percent != null && percent! < 0.01) ...[
+          const SizedBox(height: 4),
+          Text(
+            l10n.startCounting,
+            style: Theme.of(context)
+                .textTheme
+                .bodySmall
+                ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+          ),
         ],
       ],
     );

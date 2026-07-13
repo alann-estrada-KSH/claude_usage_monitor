@@ -28,6 +28,7 @@
   "renameAccountTooltip": "Rename account",
   "renameAccountDialogTitle": "Rename this account",
   "save": "Save",
+  "startCounting": "Write a message to start counting",
   "noUsageDataYet": "No usage data yet.",
   "usageDataUnavailable": "Usage data not available ({reason})",
   "@usageDataUnavailable": {

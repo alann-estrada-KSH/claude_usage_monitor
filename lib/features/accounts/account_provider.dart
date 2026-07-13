@@ -1,11 +1,17 @@
-import 'package:flutter/foundation.dart';
+import 'dart:io' show Platform;
 
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../core/models/app_settings.dart';
 import '../../core/models/claude_account.dart';
 import '../../core/models/usage_history_point.dart';
 import '../../core/notifications/usage_alert_service.dart';
 import '../../core/scraping/android_account_cookie_store.dart';
 import '../../core/scraping/usage_scraper.dart';
 import '../../core/storage/account_store.dart';
+import '../../core/storage/app_settings_store.dart';
 import '../../core/storage/usage_history_store.dart';
 
 class AccountProvider extends ChangeNotifier {
@@ -15,17 +21,20 @@ class AccountProvider extends ChangeNotifier {
     UsageAlertService? alerts,
     UsageHistoryStore? history,
     AndroidAccountCookieStore? androidCookies,
+    AppSettingsStore? settingsStore,
   })  : _store = store ?? AccountStore(),
         _scraper = scraper ?? UsageScraper(),
         _alerts = alerts ?? UsageAlertService(),
         _history = history ?? UsageHistoryStore(),
-        _androidCookies = androidCookies ?? const AndroidAccountCookieStore();
+        _androidCookies = androidCookies ?? const AndroidAccountCookieStore(),
+        _settingsStore = settingsStore ?? AppSettingsStore();
 
   final AccountStore _store;
   final UsageScraper _scraper;
   final UsageAlertService _alerts;
   final UsageHistoryStore _history;
   final AndroidAccountCookieStore _androidCookies;
+  final AppSettingsStore _settingsStore;
 
   List<ClaudeAccount> _accounts = [];
   List<ClaudeAccount> get accounts => List.unmodifiable(_accounts);
@@ -37,9 +46,12 @@ class AccountProvider extends ChangeNotifier {
     await _store.init();
     await _alerts.init();
     await _history.init();
+    await _settingsStore.init();
     _accounts = _store.getAll()..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
     notifyListeners();
   }
+
+  AppSettings _loadSettings() => _settingsStore.load();
 
   List<UsageHistoryPoint> historyFor(String accountId) => _history.forAccount(accountId);
 
@@ -122,6 +134,8 @@ class AccountProvider extends ChangeNotifier {
     await _persist(first.id);
   }
 
+  static const _widgetChannel = MethodChannel('claude_usage_monitor/widget');
+
   Future<void> refreshAll() async {
     if (_isRefreshing || _accounts.isEmpty) return;
     _isRefreshing = true;
@@ -130,23 +144,61 @@ class AccountProvider extends ChangeNotifier {
       for (final account in _accounts) {
         await refreshUsage(account.id);
       }
+      if (Platform.isAndroid) await _updateAndroidWidgets();
     } finally {
       _isRefreshing = false;
       notifyListeners();
     }
   }
 
+  /// Writes account data to SharedPreferences so the Android home-screen
+  /// widget and Quick Tile can read it without an active Flutter isolate, then
+  /// sends a MethodChannel ping so MainActivity can push an immediate widget
+  /// update while the app is in the foreground.
+  Future<void> _updateAndroidWidgets() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('usage_widget_count', _accounts.length);
+      for (var i = 0; i < _accounts.length; i++) {
+        final a = _accounts[i];
+        final u = a.lastKnownUsage;
+        await prefs.setString('usage_widget_${i}_label', a.label);
+        await prefs.setDouble('usage_widget_${i}_five_hour', u?.fiveHourPercent ?? -1.0);
+        await prefs.setDouble('usage_widget_${i}_weekly', u?.weeklyPercent ?? -1.0);
+        await prefs.setBool('usage_widget_${i}_has_error',
+            a.lastFetchError != null && u == null);
+        await prefs.setBool('usage_widget_${i}_session_expired', a.lastFetchSessionExpired);
+      }
+      await prefs.setString('usage_widget_updated_at', DateTime.now().toIso8601String());
+      await _widgetChannel.invokeMethod('updateWidgets');
+    } catch (_) {
+      // Widget update failure must never surface to the user.
+    }
+  }
+
   Future<void> refreshUsage(String accountId) async {
     final previous = _accounts.firstWhere((a) => a.id == accountId).lastKnownUsage;
     final snapshot = await _scraper.fetchUsage(profile: accountId);
-    _updateAccount(
-      accountId,
-      (a) => a.copyWith(lastKnownUsage: snapshot, lastFetchedAt: DateTime.now()),
-    );
-    await _persist(accountId);
-    final account = _accounts.firstWhere((a) => a.id == accountId);
-    await _alerts.check(account: account, previous: previous, next: snapshot);
     if (snapshot.isAvailable) {
+      _updateAccount(
+        accountId,
+        (a) => a.copyWith(
+          lastKnownUsage: snapshot,
+          lastFetchedAt: DateTime.now(),
+          clearLastFetchError: true,
+          lastFetchSessionExpired: false,
+        ),
+      );
+      await _persist(accountId);
+      final account = _accounts.firstWhere((a) => a.id == accountId);
+      final settings = _loadSettings();
+      await _alerts.check(
+        account: account,
+        previous: previous,
+        next: snapshot,
+        warningThreshold: settings.warningThresholdPercent,
+        criticalThreshold: settings.criticalThresholdPercent,
+      );
       await _history.append(
         accountId,
         UsageHistoryPoint(
@@ -155,6 +207,26 @@ class AccountProvider extends ChangeNotifier {
           weeklyPercent: snapshot.weeklyPercent,
         ),
       );
+    } else if (snapshot.sessionExpired) {
+      _updateAccount(
+        accountId,
+        (a) => a.copyWith(
+          lastFetchedAt: DateTime.now(),
+          clearLastFetchError: true,
+          lastFetchSessionExpired: true,
+        ),
+      );
+      await _persist(accountId);
+    } else {
+      _updateAccount(
+        accountId,
+        (a) => a.copyWith(
+          lastFetchedAt: DateTime.now(),
+          lastFetchError: snapshot.parseError ?? 'Unknown error',
+          lastFetchSessionExpired: false,
+        ),
+      );
+      await _persist(accountId);
     }
     notifyListeners();
   }

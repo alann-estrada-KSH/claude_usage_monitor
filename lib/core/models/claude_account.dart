@@ -11,10 +11,16 @@ class ClaudeAccount {
     this.isLoggedIn = false,
     this.showInFocusMode = true,
     this.sortOrder = 0,
+    this.lastFetchError,
+    this.lastFetchSessionExpired = false,
   });
 
   final String id;
   final String label;
+
+  /// Last *successful* usage snapshot -- never overwritten by a failed fetch.
+  /// Use [lastFetchError] / [lastFetchSessionExpired] to know if the most
+  /// recent attempt failed.
   final UsageSnapshot? lastKnownUsage;
   final DateTime? lastFetchedAt;
   final bool isLoggedIn;
@@ -29,6 +35,15 @@ class ClaudeAccount {
   /// AccountProvider.reorderAccounts.
   final int sortOrder;
 
+  /// Non-null when the last fetch failed with a non-auth error. Cleared on
+  /// the next successful fetch. [lastKnownUsage] still holds the last good
+  /// data so the UI can show cached percentages alongside this error.
+  final String? lastFetchError;
+
+  /// True when the last fetch failed because the session expired (401/403).
+  /// Cleared on the next successful fetch.
+  final bool lastFetchSessionExpired;
+
   ClaudeAccount copyWith({
     String? label,
     UsageSnapshot? lastKnownUsage,
@@ -36,6 +51,9 @@ class ClaudeAccount {
     bool? isLoggedIn,
     bool? showInFocusMode,
     int? sortOrder,
+    String? lastFetchError,
+    bool clearLastFetchError = false,
+    bool? lastFetchSessionExpired,
   }) {
     return ClaudeAccount(
       id: id,
@@ -45,6 +63,8 @@ class ClaudeAccount {
       isLoggedIn: isLoggedIn ?? this.isLoggedIn,
       showInFocusMode: showInFocusMode ?? this.showInFocusMode,
       sortOrder: sortOrder ?? this.sortOrder,
+      lastFetchError: clearLastFetchError ? null : (lastFetchError ?? this.lastFetchError),
+      lastFetchSessionExpired: lastFetchSessionExpired ?? this.lastFetchSessionExpired,
     );
   }
 
@@ -56,6 +76,8 @@ class ClaudeAccount {
         'isLoggedIn': isLoggedIn,
         'showInFocusMode': showInFocusMode,
         'sortOrder': sortOrder,
+        'lastFetchError': lastFetchError,
+        'lastFetchSessionExpired': lastFetchSessionExpired,
       };
 
   factory ClaudeAccount.fromJson(Map<String, dynamic> json) {
@@ -72,6 +94,8 @@ class ClaudeAccount {
       isLoggedIn: json['isLoggedIn'] as bool? ?? false,
       showInFocusMode: json['showInFocusMode'] as bool? ?? true,
       sortOrder: json['sortOrder'] as int? ?? 0,
+      lastFetchError: json['lastFetchError'] as String?,
+      lastFetchSessionExpired: json['lastFetchSessionExpired'] as bool? ?? false,
     );
   }
 }

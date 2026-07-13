@@ -5,16 +5,15 @@ import '../models/usage_snapshot.dart';
 import '../storage/notification_log_store.dart';
 import 'notification_service.dart';
 
-/// Watches each refresh for two transitions and fires a local notification
-/// exactly once per occurrence (deduped via [NotificationLogStore], keyed by
-/// account + window + reset timestamp so a new cycle can alert again):
+/// Watches each refresh for transitions that should fire a local notification,
+/// deduped via [NotificationLogStore]:
 ///
-/// - A window that had real usage (>1%) crossing its `resetAt` -- "your
-///   limit just reset".
-/// - A window reaching 100% -- "you've hit the limit".
-///
-/// Both are detected on refresh (this app only ever runs "while open" per
-/// its own design -- no background service), not scheduled ahead of time.
+/// - Window crossing its `resetAt` -- "limit just reset" (immediate)
+/// - Window reaching 100% -- "limit exhausted" (immediate)
+/// - Window crossing the warning threshold (upward) -- "usage warning"
+/// - Window crossing the critical threshold (upward) -- "usage critical"
+/// - Schedules an exact/inexact alarm for each window's next `resetAt` so the
+///   reset notification fires even when the app is not in the foreground.
 class UsageAlertService {
   UsageAlertService({NotificationService? notifications, NotificationLogStore? log})
       : _notifications = notifications ?? NotificationService.instance,
@@ -29,6 +28,8 @@ class UsageAlertService {
     required ClaudeAccount account,
     required UsageSnapshot? previous,
     required UsageSnapshot next,
+    int warningThreshold = 80,
+    int criticalThreshold = 95,
   }) async {
     await _checkWindow(
       account: account,
@@ -36,6 +37,9 @@ class UsageAlertService {
       previousPercent: previous?.fiveHourPercent,
       previousResetAt: previous?.fiveHourResetAt,
       nextPercent: next.fiveHourPercent,
+      nextResetAt: next.fiveHourResetAt,
+      warningThreshold: warningThreshold,
+      criticalThreshold: criticalThreshold,
     );
     await _checkWindow(
       account: account,
@@ -43,6 +47,9 @@ class UsageAlertService {
       previousPercent: previous?.weeklyPercent,
       previousResetAt: previous?.weeklyResetAt,
       nextPercent: next.weeklyPercent,
+      nextResetAt: next.weeklyResetAt,
+      warningThreshold: warningThreshold,
+      criticalThreshold: criticalThreshold,
     );
   }
 
@@ -52,15 +59,17 @@ class UsageAlertService {
     required double? previousPercent,
     required DateTime? previousResetAt,
     required double? nextPercent,
+    required DateTime? nextResetAt,
+    required int warningThreshold,
+    required int criticalThreshold,
   }) async {
     // ponytail: language for notification text comes from the OS locale,
     // not the in-app language override setting -- wiring that through would
     // mean threading SettingsProvider into AccountProvider/this service for
     // a cosmetic edge case (override language differs from OS language).
-    // Upgrade path: pass a `String Function() languageCode` resolver in if
-    // that mismatch actually bothers someone.
     final lang = PlatformDispatcher.instance.locale.languageCode == 'es' ? 'es' : 'en';
 
+    // --- Reset detection (immediate, after the fact) ---
     if (previousResetAt != null &&
         previousPercent != null &&
         previousPercent > 1 &&
@@ -75,6 +84,7 @@ class UsageAlertService {
       }
     }
 
+    // --- Exhausted (100%) ---
     final exhaustedKey = '${account.id}:$windowKey:exhausted';
     if (nextPercent != null && nextPercent >= 100) {
       if (!_log.hasFired(exhaustedKey)) {
@@ -85,11 +95,59 @@ class UsageAlertService {
         );
       }
     } else if (nextPercent != null && nextPercent < 100) {
-      // Re-arm: next time this window hits 100% again (a future cycle), it
-      // should notify again instead of staying silent forever after the
-      // first time.
       await _log.clear(exhaustedKey);
     }
+
+    // --- Threshold crossings (upward only, re-armed when falling back below) ---
+    if (nextPercent != null && previousPercent != null) {
+      final prev = previousPercent;
+      final next = nextPercent;
+
+      final warnKey = '${account.id}:$windowKey:warning:$warningThreshold';
+      if (next >= warningThreshold && prev < warningThreshold) {
+        if (!_log.hasFired(warnKey)) {
+          await _log.markFired(warnKey);
+          await _notifications.show(
+            title: _warningTitle(lang),
+            body: _thresholdBody(lang, windowKey, account.label, next.toInt()),
+          );
+        }
+      } else if (next < warningThreshold) {
+        await _log.clear(warnKey);
+      }
+
+      final critKey = '${account.id}:$windowKey:critical:$criticalThreshold';
+      if (next >= criticalThreshold && prev < criticalThreshold) {
+        if (!_log.hasFired(critKey)) {
+          await _log.markFired(critKey);
+          await _notifications.show(
+            title: _criticalTitle(lang),
+            body: _thresholdBody(lang, windowKey, account.label, next.toInt()),
+          );
+        }
+      } else if (next < criticalThreshold) {
+        await _log.clear(critKey);
+      }
+    }
+
+    // --- Schedule an alarm for the next reset (fires even when app is killed) ---
+    if (nextResetAt != null && nextResetAt.isAfter(DateTime.now())) {
+      final schedId = _scheduleId(account.id, windowKey);
+      await _notifications.cancelScheduled(schedId);
+      await _notifications.scheduleAt(
+        id: schedId,
+        title: _resetTitle(lang),
+        body: _resetBody(lang, windowKey, account.label),
+        when: nextResetAt,
+      );
+    }
+  }
+
+  // Stable IDs in ranges that don't collide with sequential immediate IDs.
+  // five_hour → 0x4000-0x7FFF, weekly → 0x8000-0xBFFF.
+  int _scheduleId(String accountId, String windowKey) {
+    final h = accountId.hashCode.abs() % 0x3FFF;
+    return windowKey == 'five_hour' ? 0x4000 + h : 0x8000 + h;
   }
 
   String _windowLabel(String lang, String windowKey) {
@@ -113,5 +171,16 @@ class UsageAlertService {
     return lang == 'es'
         ? 'Alcanzaste el límite de $w en "$accountLabel".'
         : 'You hit the $w limit on "$accountLabel".';
+  }
+
+  String _warningTitle(String lang) => lang == 'es' ? 'Aviso de uso' : 'Usage warning';
+
+  String _criticalTitle(String lang) => lang == 'es' ? 'Uso crítico' : 'Usage critical';
+
+  String _thresholdBody(String lang, String windowKey, String accountLabel, int percent) {
+    final w = _windowLabel(lang, windowKey);
+    return lang == 'es'
+        ? 'Tu $w de "$accountLabel" está al $percent%.'
+        : 'Your $w for "$accountLabel" is at $percent%.';
   }
 }

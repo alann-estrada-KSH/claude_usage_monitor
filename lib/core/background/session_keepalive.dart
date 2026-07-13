@@ -3,8 +3,12 @@ import 'dart:io' show Platform;
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:workmanager/workmanager.dart';
 
+import '../notifications/notification_service.dart';
+import '../notifications/usage_alert_service.dart';
 import '../scraping/usage_scraper.dart';
 import '../storage/account_store.dart';
+import '../storage/app_settings_store.dart';
+import '../storage/notification_log_store.dart';
 
 const _uniqueName = 'claude_usage_monitor.session_keepalive';
 const _taskName = 'session_keepalive';
@@ -18,28 +22,71 @@ void sessionKeepAliveCallbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
     try {
       await Hive.initFlutter();
-      final store = AccountStore();
-      await store.init();
+
+      final accountStore = AccountStore();
+      await accountStore.init();
+      final logStore = NotificationLogStore();
+      await logStore.init();
+      final settingsStore = AppSettingsStore();
+      await settingsStore.init();
+
+      await NotificationService.instance.initBackground();
+      final alerts = UsageAlertService(
+        notifications: NotificationService.instance,
+        log: logStore,
+      );
+
       final scraper = UsageScraper();
-      for (final account in store.getAll()) {
-        // Just needs to hit the API with the existing session cookies to
-        // keep Claude from expiring it due to inactivity -- the result
-        // isn't surfaced anywhere from here, there's no UI to show it to.
-        await scraper.fetchUsage(profile: account.id);
+      final settings = settingsStore.load();
+
+      for (final account in accountStore.getAll()) {
+        try {
+          final previous = account.lastKnownUsage;
+          final snapshot = await scraper.fetchUsage(profile: account.id);
+          if (snapshot.isAvailable) {
+            final updated = account.copyWith(
+              lastKnownUsage: snapshot,
+              lastFetchedAt: DateTime.now(),
+              clearLastFetchError: true,
+              lastFetchSessionExpired: false,
+            );
+            await accountStore.save(updated);
+            await alerts.check(
+              account: updated,
+              previous: previous,
+              next: snapshot,
+              warningThreshold: settings.warningThresholdPercent,
+              criticalThreshold: settings.criticalThresholdPercent,
+            );
+          } else if (snapshot.sessionExpired) {
+            await accountStore.save(account.copyWith(
+              lastFetchedAt: DateTime.now(),
+              clearLastFetchError: true,
+              lastFetchSessionExpired: true,
+            ));
+          } else {
+            await accountStore.save(account.copyWith(
+              lastFetchedAt: DateTime.now(),
+              lastFetchError: snapshot.parseError ?? 'Unknown error',
+              lastFetchSessionExpired: false,
+            ));
+          }
+        } catch (_) {
+          // Per-account failure must not stop other accounts or crash WorkManager.
+        }
       }
     } catch (_) {
-      // Best-effort ping with nobody watching this run -- never let a
-      // failure here retry-storm or crash the WorkManager task.
+      // Top-level guard: WorkManager retries on unhandled exceptions, which
+      // would storm the API if init itself is broken -- eat it instead.
     }
     return true;
   });
 }
 
-/// Android-only periodic background ping to keep Claude's session cookies
-/// from expiring between foreground opens -- plain Dart `Timer`s stop the
-/// moment Android suspends or kills the process, so WorkManager (via the
-/// `workmanager` plugin) is the only way to actually run something on a
-/// schedule while the app isn't in the foreground. No-op everywhere else.
+/// Android-only periodic background task that keeps Claude's session cookies
+/// alive AND runs a full usage fetch + alert check so users get notified of
+/// limit resets and threshold crossings even when the app is not open.
+/// No-op everywhere else.
 class SessionKeepAlive {
   static bool get isSupported => Platform.isAndroid;
 

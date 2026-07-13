@@ -1,8 +1,12 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:quick_actions/quick_actions.dart';
 
 import '../../core/connectivity/connectivity_provider.dart';
 import '../../core/models/claude_account.dart';
+import '../../core/models/usage_snapshot.dart';
 import '../../core/polling/usage_poller.dart';
 import '../../core/status/claude_status_provider.dart';
 import '../../core/tray/app_tray_controller.dart';
@@ -62,6 +66,21 @@ class _DashboardPageState extends State<DashboardPage> {
 
     await connectivity.init();
     connectivity.onReconnected = () => provider.refreshAll();
+
+    if (Platform.isAndroid || Platform.isIOS) {
+      const QuickActions quickActions = QuickActions();
+      quickActions.initialize((type) {
+        if (type == 'refresh_now' && mounted) {
+          context.read<AccountProvider>().refreshAll();
+        }
+      });
+      quickActions.setShortcutItems([
+        ShortcutItem(
+          type: 'refresh_now',
+          localizedTitle: l10n.refreshNowTooltip,
+        ),
+      ]);
+    }
 
     await provider.init();
     if (connectivity.hasConnection) await provider.refreshAll();
@@ -423,10 +442,7 @@ class _AccountCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                    if (usage == null) ...[
-                      const SizedBox(height: 4),
-                      Text(l10n.noUsageDataYet),
-                    ] else if (usage.sessionExpired) ...[
+                    if (account.lastFetchSessionExpired) ...[
                       const SizedBox(height: 4),
                       Row(
                         children: [
@@ -446,7 +462,11 @@ class _AccountCard extends StatelessWidget {
                         icon: const Icon(Icons.login, size: 18),
                         label: Text(l10n.reconnectButton),
                       ),
-                    ] else if (!usage.isAvailable) ...[
+                      if (usage != null) ...[
+                        const SizedBox(height: 12),
+                        _buildUsageBars(context, l10n, usage),
+                      ],
+                    ] else if (account.lastFetchError != null && usage == null) ...[
                       const SizedBox(height: 4),
                       Row(
                         children: [
@@ -454,33 +474,36 @@ class _AccountCard extends StatelessWidget {
                           const SizedBox(width: 6),
                           Expanded(
                             child: Text(
-                              l10n.usageDataUnavailable(usage.parseError ?? l10n.unknownReason),
+                              l10n.usageDataUnavailable(account.lastFetchError ?? l10n.unknownReason),
                               style: TextStyle(color: Theme.of(context).colorScheme.error),
                             ),
                           ),
                         ],
                       ),
+                    ] else if (account.lastFetchError != null && usage != null) ...[
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Icon(Icons.warning_amber_rounded, size: 14, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              l10n.cachedDataWarning,
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      _buildUsageBars(context, l10n, usage),
+                    ] else if (usage == null) ...[
+                      const SizedBox(height: 4),
+                      Text(l10n.noUsageDataYet),
                     ] else ...[
                       const SizedBox(height: 8),
-                      UsageBar(
-                        label: l10n.fiveHourWindow,
-                        percent: usage.fiveHourPercent,
-                        resetAt: usage.fiveHourResetAt,
-                        child: Padding(
-                          padding: const EdgeInsets.only(top: 4),
-                          child: Sparkline(percent: usage.fiveHourPercent),
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      UsageBar(
-                        label: l10n.weeklyWindow,
-                        percent: usage.weeklyPercent,
-                        resetAt: usage.weeklyResetAt,
-                        child: Padding(
-                          padding: const EdgeInsets.only(top: 4),
-                          child: Sparkline(percent: usage.weeklyPercent),
-                        ),
-                      ),
+                      _buildUsageBars(context, l10n, usage),
                     ],
                     if (account.lastFetchedAt != null) ...[
                       const SizedBox(height: 10),
@@ -493,6 +516,33 @@ class _AccountCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildUsageBars(BuildContext context, AppLocalizations l10n, UsageSnapshot usage) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        UsageBar(
+          label: l10n.fiveHourWindow,
+          percent: usage.fiveHourPercent,
+          resetAt: usage.fiveHourResetAt,
+          child: Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Sparkline(percent: usage.fiveHourPercent),
+          ),
+        ),
+        const SizedBox(height: 14),
+        UsageBar(
+          label: l10n.weeklyWindow,
+          percent: usage.weeklyPercent,
+          resetAt: usage.weeklyResetAt,
+          child: Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Sparkline(percent: usage.weeklyPercent),
+          ),
+        ),
+      ],
     );
   }
 

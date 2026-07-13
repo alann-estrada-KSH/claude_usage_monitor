@@ -75,7 +75,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get save => 'Save';
 
   @override
+  String get startCounting => 'Write a message to start counting';
+
+  @override
   String get noUsageDataYet => 'No usage data yet.';
+
+  @override
+  String get cachedDataWarning => 'Update failed · Showing cached data';
 
   @override
   String usageDataUnavailable(String reason) {

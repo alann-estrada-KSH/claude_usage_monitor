@@ -89,6 +89,16 @@ dependencies:
   # isolation, unlike desktop's per-profile WebKitWebContext).
   flutter_secure_storage: ^10.0.0
 
+  # Bridge for Android native widget + Quick Tile -- Kotlin reads these prefs
+  # from FlutterSharedPreferences without any IPC needed.
+  shared_preferences: ^2.3.2
+
+  # Keeps the screen on while focus mode is active (Android only).
+  wakelock_plus: ^1.2.9
+
+  # Long-press app icon shortcuts (Android / iOS).
+  quick_actions: ^1.1.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

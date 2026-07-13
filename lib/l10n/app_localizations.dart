@@ -224,11 +224,23 @@ abstract class AppLocalizations {
   /// **'Save'**
   String get save;
 
+  /// No description provided for @startCounting.
+  ///
+  /// In en, this message translates to:
+  /// **'Write a message to start counting'**
+  String get startCounting;
+
   /// No description provided for @noUsageDataYet.
   ///
   /// In en, this message translates to:
   /// **'No usage data yet.'**
   String get noUsageDataYet;
+
+  /// No description provided for @cachedDataWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Update failed · Showing cached data'**
+  String get cachedDataWarning;
 
   /// No description provided for @usageDataUnavailable.
   ///

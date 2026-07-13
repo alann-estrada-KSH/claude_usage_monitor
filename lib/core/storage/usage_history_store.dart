@@ -8,8 +8,8 @@ import '../models/usage_history_point.dart';
 /// very short refresh interval.
 class UsageHistoryStore {
   static const _boxName = 'usage_history';
-  static const _window = Duration(hours: 48);
-  static const _maxPoints = 500;
+  static const _window = Duration(days: 30);
+  static const _maxPoints = 5000;
 
   Box<List>? _box;
 

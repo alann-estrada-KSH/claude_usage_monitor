@@ -29,6 +29,24 @@ class NotificationService {
 
   bool get _supported => Platform.isAndroid || Platform.isLinux;
 
+  /// Lightweight init for the WorkManager background isolate -- skips
+  /// permission requests (they require a UI) and only registers the plugin.
+  Future<void> initBackground() async {
+    if (_initialized || !_supported) return;
+    try {
+      tz_data.initializeTimeZones();
+      await _plugin.initialize(
+        const InitializationSettings(
+          android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+          linux: LinuxInitializationSettings(defaultActionName: 'Open Claude Usage Monitor'),
+        ),
+      );
+      _initialized = true;
+    } catch (e) {
+      print('[NotificationService] background init failed: $e');
+    }
+  }
+
   Future<void> init() async {
     if (_initialized || !_supported) return;
     try {
@@ -114,6 +132,60 @@ class NotificationService {
       );
     } catch (e) {
       print('[NotificationService] show failed: $e');
+    }
+  }
+
+  /// Cancels a previously-scheduled notification by [id]. No-op if none exists.
+  Future<void> cancelScheduled(int id) async {
+    if (!_initialized) return;
+    try {
+      await _plugin.cancel(id);
+    } catch (e) {
+      print('[NotificationService] cancel($id) failed: $e');
+    }
+  }
+
+  /// Schedules a notification to fire at [when] (absolute local time).
+  /// Android only -- desktop never had schedulable background alerts.
+  Future<void> scheduleAt({
+    required int id,
+    required String title,
+    required String body,
+    required DateTime when,
+  }) async {
+    if (!_initialized || !Platform.isAndroid) return;
+    if (!when.isAfter(DateTime.now())) return;
+    try {
+      var scheduleMode = AndroidScheduleMode.inexactAllowWhileIdle;
+      final androidPlugin = _plugin.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
+      final canExact = await androidPlugin?.canScheduleExactNotifications() ?? false;
+      if (canExact) scheduleMode = AndroidScheduleMode.exactAllowWhileIdle;
+
+      final utc = when.toUtc();
+      final tzWhen = tz.TZDateTime.utc(
+        utc.year, utc.month, utc.day, utc.hour, utc.minute, utc.second,
+      );
+      await _plugin.zonedSchedule(
+        id,
+        title,
+        body,
+        tzWhen,
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'usage_alerts',
+            'Usage alerts',
+            channelDescription: 'Limit resets and exhausted-limit alerts',
+            importance: Importance.high,
+            priority: Priority.high,
+          ),
+        ),
+        androidScheduleMode: scheduleMode,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+      );
+    } catch (e) {
+      print('[NotificationService] scheduleAt failed: $e');
     }
   }
 

@@ -21,6 +21,7 @@
   "renameAccountTooltip": "Renombrar cuenta",
   "renameAccountDialogTitle": "Renombra esta cuenta",
   "save": "Guardar",
+  "startCounting": "Escribe un mensaje para empezar el conteo",
   "noUsageDataYet": "Aún no hay datos de uso.",
   "usageDataUnavailable": "Datos de uso no disponibles ({reason})",
   "unknownReason": "razón desconocida",
