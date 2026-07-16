@@ -907,6 +907,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Unofficial tool, not affiliated with or endorsed by Anthropic. 100% local: no telemetry, no analytics, cookies never leave this device.'**
   String get aboutFooter;
+
+  /// No description provided for @monthlyWindow.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly limit (30 days)'**
+  String get monthlyWindow;
+
+  /// No description provided for @copilotChatWindow.
+  ///
+  /// In en, this message translates to:
+  /// **'Copilot Chat'**
+  String get copilotChatWindow;
+
+  /// No description provided for @copilotCompletionsWindow.
+  ///
+  /// In en, this message translates to:
+  /// **'Copilot Completions'**
+  String get copilotCompletionsWindow;
+
+  /// No description provided for @selectProviderTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select provider'**
+  String get selectProviderTitle;
 }
 
 class _AppLocalizationsDelegate

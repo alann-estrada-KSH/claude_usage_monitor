@@ -468,4 +468,16 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get aboutFooter =>
       'Unofficial tool, not affiliated with or endorsed by Anthropic. 100% local: no telemetry, no analytics, cookies never leave this device.';
+
+  @override
+  String get monthlyWindow => 'Monthly limit (30 days)';
+
+  @override
+  String get copilotChatWindow => 'Copilot Chat';
+
+  @override
+  String get copilotCompletionsWindow => 'Copilot Completions';
+
+  @override
+  String get selectProviderTitle => 'Select provider';
 }

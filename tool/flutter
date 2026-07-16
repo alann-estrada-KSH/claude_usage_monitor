@@ -30,8 +30,9 @@ fi
 # native_assets/FFI hooks, so nothing else ever creates it.
 mkdir -p build/native_assets/linux
 
-exec env -u PKG_CONFIG_PATH \
-  PATH="$RAW_SDK/bin:/usr/bin:/bin:/usr/local/bin" \
+exec env -u PKG_CONFIG_PATH -u LD_LIBRARY_PATH -u LD_PRELOAD \
+  PATH="/usr/bin:/bin:/usr/local/bin:$RAW_SDK/bin" \
   FLUTTER_ROOT="$RAW_SDK" \
   CC=clang CXX=clang++ \
+  LDFLAGS="-fuse-ld=/usr/bin/ld" \
   "$DART" --packages="$RAW_SDK/packages/flutter_tools/.dart_tool/package_config.json" "$SNAPSHOT" "$@"

@@ -1,5 +1,17 @@
 # Project-level configuration.
 cmake_minimum_required(VERSION 3.13)
+
+# Force the host system's linker (/usr/bin/ld) over Snap's old bundled ld
+# to prevent '.relr.dyn' GLIBC linker failures on modern Linux distributions.
+add_link_options("-fuse-ld=/usr/bin/ld")
+set(CMAKE_EXE_LINKER_FLAGS "-fuse-ld=/usr/bin/ld ${CMAKE_EXE_LINKER_FLAGS}" CACHE STRING "Flags used by the linker during all build types." FORCE)
+set(CMAKE_SHARED_LINKER_FLAGS "-fuse-ld=/usr/bin/ld ${CMAKE_SHARED_LINKER_FLAGS}" CACHE STRING "Flags used by the linker during the creation of shared libraries." FORCE)
+set(CMAKE_MODULE_LINKER_FLAGS "-fuse-ld=/usr/bin/ld ${CMAKE_MODULE_LINKER_FLAGS}" CACHE STRING "Flags used by the linker during the creation of modules." FORCE)
+
+# Ensure pkg-config resolution searches host system library paths
+set(ENV{PKG_CONFIG_PATH} "/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/share/pkgconfig:/usr/lib/pkgconfig:$ENV{PKG_CONFIG_PATH}")
+set(PKG_CONFIG_EXECUTABLE "/usr/bin/pkg-config" CACHE FILEPATH "pkg-config executable" FORCE)
+
 project(runner LANGUAGES CXX)
 
 # The name of the executable created for the application. Change this to change
@@ -44,6 +56,7 @@ function(APPLY_STANDARD_SETTINGS TARGET)
   target_compile_options(${TARGET} PRIVATE -Wall -Werror)
   target_compile_options(${TARGET} PRIVATE "$<$<NOT:$<CONFIG:Debug>>:-O3>")
   target_compile_definitions(${TARGET} PRIVATE "$<$<NOT:$<CONFIG:Debug>>:NDEBUG>")
+  target_link_options(${TARGET} PRIVATE "-fuse-ld=/usr/bin/ld")
 endfunction()
 
 # Flutter library and tool build rules.

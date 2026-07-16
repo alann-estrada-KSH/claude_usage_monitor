@@ -232,5 +232,9 @@
   "reset": "Reset",
   "resetDone": "Settings reset.",
   "creditsLine": "Made by Alann Estrada -- github.com/alannnn-estrada",
-  "aboutFooter": "Unofficial tool, not affiliated with or endorsed by Anthropic. 100% local: no telemetry, no analytics, cookies never leave this device."
+  "aboutFooter": "Unofficial tool, not affiliated with or endorsed by Anthropic. 100% local: no telemetry, no analytics, cookies never leave this device.",
+  "monthlyWindow": "Monthly limit (30 days)",
+  "copilotChatWindow": "Copilot Chat",
+  "copilotCompletionsWindow": "Copilot Completions",
+  "selectProviderTitle": "Select provider"
 }

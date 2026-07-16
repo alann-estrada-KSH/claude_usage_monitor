@@ -1,11 +1,13 @@
+import 'provider_type.dart';
 import 'usage_snapshot.dart';
 
-/// A Claude.ai account being monitored. [id] doubles as the isolated
+/// An account being monitored (Claude, Codex, Antigravity). [id] doubles as the isolated
 /// WebView storage namespace (cookie partition) for this account.
 class ClaudeAccount {
   const ClaudeAccount({
     required this.id,
     required this.label,
+    this.providerType = AccountProviderType.claude,
     this.lastKnownUsage,
     this.lastFetchedAt,
     this.isLoggedIn = false,
@@ -17,6 +19,7 @@ class ClaudeAccount {
 
   final String id;
   final String label;
+  final AccountProviderType providerType;
 
   /// Last *successful* usage snapshot -- never overwritten by a failed fetch.
   /// Use [lastFetchError] / [lastFetchSessionExpired] to know if the most
@@ -46,6 +49,7 @@ class ClaudeAccount {
 
   ClaudeAccount copyWith({
     String? label,
+    AccountProviderType? providerType,
     UsageSnapshot? lastKnownUsage,
     DateTime? lastFetchedAt,
     bool? isLoggedIn,
@@ -58,6 +62,7 @@ class ClaudeAccount {
     return ClaudeAccount(
       id: id,
       label: label ?? this.label,
+      providerType: providerType ?? this.providerType,
       lastKnownUsage: lastKnownUsage ?? this.lastKnownUsage,
       lastFetchedAt: lastFetchedAt ?? this.lastFetchedAt,
       isLoggedIn: isLoggedIn ?? this.isLoggedIn,
@@ -71,6 +76,7 @@ class ClaudeAccount {
   Map<String, dynamic> toJson() => {
         'id': id,
         'label': label,
+        'providerType': providerType.name,
         'lastKnownUsage': lastKnownUsage?.toJson(),
         'lastFetchedAt': lastFetchedAt?.toIso8601String(),
         'isLoggedIn': isLoggedIn,
@@ -84,6 +90,7 @@ class ClaudeAccount {
     return ClaudeAccount(
       id: json['id'] as String,
       label: json['label'] as String,
+      providerType: AccountProviderType.fromString(json['providerType'] as String?),
       lastKnownUsage: json['lastKnownUsage'] != null
           ? UsageSnapshot.fromJson(
               Map<String, dynamic>.from(json['lastKnownUsage'] as Map))

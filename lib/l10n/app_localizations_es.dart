@@ -470,4 +470,16 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get aboutFooter =>
       'Herramienta no oficial, no afiliada ni respaldada por Anthropic. 100% local: sin telemetría, sin analítica, las cookies nunca salen de este dispositivo.';
+
+  @override
+  String get monthlyWindow => 'Límite mensual (30 días)';
+
+  @override
+  String get copilotChatWindow => 'Copilot Chat';
+
+  @override
+  String get copilotCompletionsWindow => 'Copilot Autocompletados';
+
+  @override
+  String get selectProviderTitle => 'Seleccionar proveedor';
 }

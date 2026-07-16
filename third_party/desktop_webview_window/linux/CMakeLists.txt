@@ -12,7 +12,7 @@ if (NOT WebKit_FOUND)
   pkg_check_modules(WebKit REQUIRED IMPORTED_TARGET webkit2gtk-4.0)  # for backward compatibility
 endif ()
 
-pkg_check_modules(LibSoup REQUIRED IMPORTED_TARGET libsoup-3.0)
+pkg_check_modules(LibSoup IMPORTED_TARGET libsoup-3.0)
 if (NOT LibSoup_FOUND)
   pkg_check_modules(LibSoup REQUIRED IMPORTED_TARGET libsoup-2.4)
 endif()
@@ -34,6 +34,7 @@ target_include_directories(${PLUGIN_NAME} INTERFACE
 target_link_libraries(${PLUGIN_NAME} PRIVATE flutter)
 target_link_libraries(${PLUGIN_NAME} PRIVATE PkgConfig::GTK)
 target_link_libraries(${PLUGIN_NAME} PRIVATE PkgConfig::WebKit)
+target_link_libraries(${PLUGIN_NAME} PRIVATE PkgConfig::LibSoup)
 
 # List of absolute paths to libraries that should be bundled with the plugin
 set(desktop_webview_window_bundled_libraries

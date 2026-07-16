@@ -134,5 +134,9 @@
   "reset": "Restablecer",
   "resetDone": "Configuración restablecida.",
   "creditsLine": "Hecho por Alann Estrada -- github.com/alannnn-estrada",
-  "aboutFooter": "Herramienta no oficial, no afiliada ni respaldada por Anthropic. 100% local: sin telemetría, sin analítica, las cookies nunca salen de este dispositivo."
+  "aboutFooter": "Herramienta no oficial, no afiliada ni respaldada por Anthropic. 100% local: sin telemetría, sin analítica, las cookies nunca salen de este dispositivo.",
+  "monthlyWindow": "Límite mensual (30 días)",
+  "copilotChatWindow": "Copilot Chat",
+  "copilotCompletionsWindow": "Copilot Autocompletados",
+  "selectProviderTitle": "Seleccionar proveedor"
 }

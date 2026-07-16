@@ -6,6 +6,7 @@ import 'package:quick_actions/quick_actions.dart';
 
 import '../../core/connectivity/connectivity_provider.dart';
 import '../../core/models/claude_account.dart';
+import '../../core/models/provider_type.dart';
 import '../../core/models/usage_snapshot.dart';
 import '../../core/polling/usage_poller.dart';
 import '../../core/status/claude_status_provider.dart';
@@ -142,6 +143,12 @@ class _DashboardPageState extends State<DashboardPage> {
 
   Future<void> _addAccount() async {
     final l10n = AppLocalizations.of(context)!;
+    final selectedProvider = await showDialog<AccountProviderType>(
+      context: context,
+      builder: (context) => const _ProviderSelectionDialog(),
+    );
+    if (selectedProvider == null || !mounted) return;
+
     final label = await showDialog<String>(
       context: context,
       builder: (context) => _LabelDialog(
@@ -151,18 +158,16 @@ class _DashboardPageState extends State<DashboardPage> {
     );
     if (label == null || label.trim().isEmpty || !mounted) return;
 
-    // Generated up front (not by addAccount, afterwards) so the login
-    // webview can use it as its cookie profile *before* the account record
-    // exists -- login and the later cookie-read both need the same id to
-    // land in the same isolated WebKitWebContext.
     final accountId = DateTime.now().microsecondsSinceEpoch.toString();
     final loggedIn = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => AccountLoginPage(profile: accountId)),
+      MaterialPageRoute(
+        builder: (_) => AccountLoginPage(profile: accountId, providerType: selectedProvider),
+      ),
     );
     if (loggedIn != true || !mounted) return;
 
     final provider = context.read<AccountProvider>();
-    final account = await provider.addAccount(label.trim(), id: accountId);
+    final account = await provider.addAccount(label.trim(), id: accountId, providerType: selectedProvider);
     await provider.refreshUsage(account.id);
   }
 
@@ -318,6 +323,41 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
+class _ProviderSelectionDialog extends StatelessWidget {
+  const _ProviderSelectionDialog();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return SimpleDialog(
+      title: Text(l10n.selectProviderTitle),
+      children: AccountProviderType.values
+          .where((type) => type != AccountProviderType.antigravity)
+          .map((type) {
+        final icon = switch (type) {
+          AccountProviderType.claude => Icons.chat_bubble_outline,
+          AccountProviderType.codex => Icons.terminal,
+          AccountProviderType.antigravity => Icons.auto_awesome,
+          AccountProviderType.copilot => Icons.code,
+        };
+        return SimpleDialogOption(
+          onPressed: () => Navigator.of(context).pop(type),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Row(
+              children: [
+                Icon(icon, size: 24),
+                const SizedBox(width: 12),
+                Text(type.displayName, style: const TextStyle(fontSize: 16)),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
+
 class _LabelDialog extends StatefulWidget {
   const _LabelDialog({this.initialValue, required this.title, required this.confirmLabel});
 
@@ -400,6 +440,13 @@ class _AccountCard extends StatelessWidget {
     final usage = account.lastKnownUsage;
     final accent = _severityColor(context);
 
+    final providerIcon = switch (account.providerType) {
+      AccountProviderType.claude => Icons.chat_bubble_outline,
+      AccountProviderType.codex => Icons.terminal,
+      AccountProviderType.antigravity => Icons.auto_awesome,
+      AccountProviderType.copilot => Icons.code,
+    };
+
     return Card(
       clipBehavior: Clip.antiAlias,
       child: IntrinsicHeight(
@@ -415,12 +462,35 @@ class _AccountCard extends StatelessWidget {
                   children: [
                     Row(
                       children: [
+                        Icon(providerIcon, size: 18, color: Theme.of(context).colorScheme.primary),
+                        const SizedBox(width: 8),
                         Expanded(
-                          child: Text(
-                            account.label,
-                            style: Theme.of(context).textTheme.titleMedium,
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
+                          child: Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  account.label,
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).colorScheme.secondaryContainer,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  account.providerType.displayName,
+                                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                        color: Theme.of(context).colorScheme.onSecondaryContainer,
+                                        fontSize: 10,
+                                      ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                         IconButton(
@@ -491,7 +561,7 @@ class _AccountCard extends StatelessWidget {
                               l10n.cachedDataWarning,
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                 color: Theme.of(context).colorScheme.onSurfaceVariant,
-                              ),
+                                ),
                             ),
                           ),
                         ],
@@ -520,28 +590,42 @@ class _AccountCard extends StatelessWidget {
   }
 
   Widget _buildUsageBars(BuildContext context, AppLocalizations l10n, UsageSnapshot usage) {
+    final isCopilot = account.providerType == AccountProviderType.copilot;
+    final hasFiveHour = usage.fiveHourPercent != null || usage.fiveHourResetAt != null;
+    final hasWeekly = usage.weeklyPercent != null || usage.weeklyResetAt != null;
+    final isMonthly = usage.weeklyResetAt != null &&
+        usage.weeklyResetAt!.difference(DateTime.now()).inDays > 14;
+
+    final firstLabel = isCopilot ? l10n.copilotChatWindow : l10n.fiveHourWindow;
+    final secondLabel = isCopilot
+        ? l10n.copilotCompletionsWindow
+        : (isMonthly ? l10n.monthlyWindow : l10n.weeklyWindow);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        UsageBar(
-          label: l10n.fiveHourWindow,
-          percent: usage.fiveHourPercent,
-          resetAt: usage.fiveHourResetAt,
-          child: Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Sparkline(percent: usage.fiveHourPercent),
+        if (hasFiveHour) ...[
+          UsageBar(
+            label: firstLabel,
+            percent: usage.fiveHourPercent,
+            resetAt: usage.fiveHourResetAt,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Sparkline(percent: usage.fiveHourPercent),
+            ),
           ),
-        ),
-        const SizedBox(height: 14),
-        UsageBar(
-          label: l10n.weeklyWindow,
-          percent: usage.weeklyPercent,
-          resetAt: usage.weeklyResetAt,
-          child: Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Sparkline(percent: usage.weeklyPercent),
+          if (hasWeekly) const SizedBox(height: 14),
+        ],
+        if (hasWeekly || !hasFiveHour)
+          UsageBar(
+            label: secondLabel,
+            percent: usage.weeklyPercent,
+            resetAt: usage.weeklyResetAt,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Sparkline(percent: usage.weeklyPercent),
+            ),
           ),
-        ),
       ],
     );
   }
@@ -578,7 +662,9 @@ class _AccountCard extends StatelessWidget {
 
   Future<void> _reconnect(BuildContext context) async {
     final loggedIn = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => AccountLoginPage(profile: account.id)),
+      MaterialPageRoute(
+        builder: (_) => AccountLoginPage(profile: account.id, providerType: account.providerType),
+      ),
     );
     if (loggedIn == true && context.mounted) {
       onRefresh();

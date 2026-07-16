@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../core/models/claude_account.dart';
+import '../../core/models/provider_type.dart';
 import '../../l10n/app_localizations.dart';
 import '../accounts/account_provider.dart';
 import 'claude_mark.dart';
@@ -207,30 +208,44 @@ class _FocusAccountBlock extends StatelessWidget {
       body = _errorRow(context, colors,
           l10n.usageDataUnavailable(account.lastFetchError ?? l10n.unknownReason));
     } else {
+      final isCopilot = account.providerType == AccountProviderType.copilot;
+      final hasFiveHour = usage?.fiveHourPercent != null || usage?.fiveHourResetAt != null;
+      final hasWeekly = usage?.weeklyPercent != null || usage?.weeklyResetAt != null;
+      final isMonthly = usage?.weeklyResetAt != null &&
+          usage!.weeklyResetAt!.difference(DateTime.now()).inDays > 14;
+
+      final firstLabel = isCopilot ? l10n.copilotChatWindow : l10n.fiveHourWindow;
+      final secondLabel = isCopilot
+          ? l10n.copilotCompletionsWindow
+          : (isMonthly ? l10n.monthlyWindow : l10n.weeklyWindow);
+
       body = Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          UsageBar(
-            label: l10n.fiveHourWindow,
-            percent: usage?.fiveHourPercent,
-            resetAt: usage?.fiveHourResetAt,
-            large: true,
-            child: Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: Sparkline(percent: usage?.fiveHourPercent, height: 14),
+          if (hasFiveHour) ...[
+            UsageBar(
+              label: firstLabel,
+              percent: usage?.fiveHourPercent,
+              resetAt: usage?.fiveHourResetAt,
+              large: true,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Sparkline(percent: usage?.fiveHourPercent, height: 14),
+              ),
             ),
-          ),
-          const SizedBox(height: 28),
-          UsageBar(
-            label: l10n.weeklyWindow,
-            percent: usage?.weeklyPercent,
-            resetAt: usage?.weeklyResetAt,
-            large: true,
-            child: Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: Sparkline(percent: usage?.weeklyPercent, height: 14),
+            if (hasWeekly) const SizedBox(height: 28),
+          ],
+          if (hasWeekly || !hasFiveHour)
+            UsageBar(
+              label: secondLabel,
+              percent: usage?.weeklyPercent,
+              resetAt: usage?.weeklyResetAt,
+              large: true,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Sparkline(percent: usage?.weeklyPercent, height: 14),
+              ),
             ),
-          ),
         ],
       );
     }

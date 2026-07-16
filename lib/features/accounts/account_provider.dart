@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/models/app_settings.dart';
 import '../../core/models/claude_account.dart';
+import '../../core/models/provider_type.dart';
 import '../../core/models/usage_history_point.dart';
 import '../../core/notifications/usage_alert_service.dart';
 import '../../core/scraping/android_account_cookie_store.dart';
@@ -58,10 +59,15 @@ class AccountProvider extends ChangeNotifier {
   /// [id], when passed, must match whatever profile the login webview used
   /// (see AccountLoginPage) -- the id has to exist *before* login so both
   /// share the same isolated cookie context. Generates one if omitted.
-  Future<ClaudeAccount> addAccount(String label, {String? id}) async {
+  Future<ClaudeAccount> addAccount(
+    String label, {
+    String? id,
+    AccountProviderType providerType = AccountProviderType.claude,
+  }) async {
     final account = ClaudeAccount(
       id: id ?? DateTime.now().microsecondsSinceEpoch.toString(),
       label: label,
+      providerType: providerType,
       isLoggedIn: true,
       // Appended at the end of the user's current order rather than 0 --
       // new accounts otherwise jump to the front of the list/focus view on
@@ -177,8 +183,12 @@ class AccountProvider extends ChangeNotifier {
   }
 
   Future<void> refreshUsage(String accountId) async {
-    final previous = _accounts.firstWhere((a) => a.id == accountId).lastKnownUsage;
-    final snapshot = await _scraper.fetchUsage(profile: accountId);
+    final account = _accounts.firstWhere((a) => a.id == accountId);
+    final previous = account.lastKnownUsage;
+    final snapshot = await _scraper.fetchUsage(
+      profile: accountId,
+      providerType: account.providerType,
+    );
     if (snapshot.isAvailable) {
       _updateAccount(
         accountId,

@@ -2,27 +2,26 @@ import 'dart:async';
 
 import 'package:desktop_webview_window/desktop_webview_window.dart';
 
+import '../models/provider_type.dart';
 import 'desktop_webview_lock.dart';
 
-/// Grabs claude.ai's session cookies via a `desktop_webview_window` webview
-/// (webkit2gtk on Linux, WebView2 on Windows) -- used on Linux/Windows where
-/// flutter_inappwebview has no usable headless backend (see README: its
-/// Linux plugin needs WPE WebKit, which Ubuntu no longer packages).
-///
-/// This app used to drive the settings UI itself (simulated clicks through
-/// a menu, a dialog, a tab) to scrape rendered percentages off the page.
-/// That fought the page's own React app and bot-resistance checks
-/// indefinitely with no reliable result. claude.ai's own usage panel gets
-/// its numbers from a plain JSON API instead (see UsageApiClient) -- all
-/// this needs to do is get the session cookies that API call requires.
+/// Grabs session cookies via a `desktop_webview_window` webview
+/// (webkit2gtk on Linux, WebView2 on Windows) for the requested provider.
 Future<String> fetchCookieHeaderDesktop({
   Duration timeout = const Duration(seconds: 20),
   String? profile,
+  AccountProviderType providerType = AccountProviderType.claude,
 }) {
-  return DesktopWebviewLock.run(() => _fetchCookieHeaderDesktop(timeout: timeout, profile: profile));
+  return DesktopWebviewLock.run(
+    () => _fetchCookieHeaderDesktop(timeout: timeout, profile: profile, providerType: providerType),
+  );
 }
 
-Future<String> _fetchCookieHeaderDesktop({required Duration timeout, String? profile}) async {
+Future<String> _fetchCookieHeaderDesktop({
+  required Duration timeout,
+  String? profile,
+  required AccountProviderType providerType,
+}) async {
   Webview? webview;
   try {
     webview = await WebviewWindow.create(
@@ -30,21 +29,15 @@ Future<String> _fetchCookieHeaderDesktop({required Duration timeout, String? pro
         windowWidth: 1280,
         windowHeight: 800,
         title: 'usage-fetch',
-        // <= 0 marks this as a background/headless window natively -- see
-        // the title_bar_height branch in webview_window.cc, which keeps it
-        // off-screen and fully transparent from creation rather than ever
-        // showing it (even briefly) on screen.
         titleBarHeight: 0,
-        // Must match whatever profile this account logged in under (see
-        // AccountLoginPage) -- otherwise this reads the wrong (or the
-        // shared default, cookie-less) context's cookies.
         profile: profile,
       ),
     );
     await webview.setWebviewWindowVisibility(false);
-    webview.launch('https://claude.ai/new');
+    webview.launch(providerType.pingUrl);
 
     await _waitForNavigationToSettle(webview, timeout);
+    await Future.delayed(const Duration(milliseconds: 1500));
 
     final cookies = await webview.getAllCookies();
     return cookies.map((c) => '${c.name}=${c.value}').join('; ');
