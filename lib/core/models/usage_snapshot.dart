@@ -7,6 +7,10 @@ class UsageSnapshot {
     this.fiveHourResetAt,
     this.weeklyPercent,
     this.weeklyResetAt,
+    this.claudeGptFiveHourPercent,
+    this.claudeGptFiveHourResetAt,
+    this.claudeGptWeeklyPercent,
+    this.claudeGptWeeklyResetAt,
     this.isAvailable = true,
     this.parseError,
     this.rawPageText,
@@ -18,6 +22,11 @@ class UsageSnapshot {
   final DateTime? fiveHourResetAt;
   final double? weeklyPercent;
   final DateTime? weeklyResetAt;
+
+  final double? claudeGptFiveHourPercent;
+  final DateTime? claudeGptFiveHourResetAt;
+  final double? claudeGptWeeklyPercent;
+  final DateTime? claudeGptWeeklyResetAt;
 
   /// False when the scrape ran but the page structure could not be parsed.
   final bool isAvailable;
@@ -55,6 +64,10 @@ class UsageSnapshot {
     DateTime? fiveHourResetAt,
     double? weeklyPercent,
     DateTime? weeklyResetAt,
+    double? claudeGptFiveHourPercent,
+    DateTime? claudeGptFiveHourResetAt,
+    double? claudeGptWeeklyPercent,
+    DateTime? claudeGptWeeklyResetAt,
     bool? isAvailable,
     String? parseError,
     bool? sessionExpired,
@@ -65,6 +78,10 @@ class UsageSnapshot {
       fiveHourResetAt: fiveHourResetAt ?? this.fiveHourResetAt,
       weeklyPercent: weeklyPercent ?? this.weeklyPercent,
       weeklyResetAt: weeklyResetAt ?? this.weeklyResetAt,
+      claudeGptFiveHourPercent: claudeGptFiveHourPercent ?? this.claudeGptFiveHourPercent,
+      claudeGptFiveHourResetAt: claudeGptFiveHourResetAt ?? this.claudeGptFiveHourResetAt,
+      claudeGptWeeklyPercent: claudeGptWeeklyPercent ?? this.claudeGptWeeklyPercent,
+      claudeGptWeeklyResetAt: claudeGptWeeklyResetAt ?? this.claudeGptWeeklyResetAt,
       isAvailable: isAvailable ?? this.isAvailable,
       parseError: parseError ?? this.parseError,
       sessionExpired: sessionExpired ?? this.sessionExpired,
@@ -77,6 +94,10 @@ class UsageSnapshot {
         'fiveHourResetAt': fiveHourResetAt?.toIso8601String(),
         'weeklyPercent': weeklyPercent,
         'weeklyResetAt': weeklyResetAt?.toIso8601String(),
+        'claudeGptFiveHourPercent': claudeGptFiveHourPercent,
+        'claudeGptFiveHourResetAt': claudeGptFiveHourResetAt?.toIso8601String(),
+        'claudeGptWeeklyPercent': claudeGptWeeklyPercent,
+        'claudeGptWeeklyResetAt': claudeGptWeeklyResetAt?.toIso8601String(),
         'isAvailable': isAvailable,
         'parseError': parseError,
         'sessionExpired': sessionExpired,
@@ -92,6 +113,14 @@ class UsageSnapshot {
       weeklyPercent: (json['weeklyPercent'] as num?)?.toDouble(),
       weeklyResetAt: json['weeklyResetAt'] != null
           ? DateTime.parse(json['weeklyResetAt'] as String)
+          : null,
+      claudeGptFiveHourPercent: (json['claudeGptFiveHourPercent'] as num?)?.toDouble(),
+      claudeGptFiveHourResetAt: json['claudeGptFiveHourResetAt'] != null
+          ? DateTime.parse(json['claudeGptFiveHourResetAt'] as String)
+          : null,
+      claudeGptWeeklyPercent: (json['claudeGptWeeklyPercent'] as num?)?.toDouble(),
+      claudeGptWeeklyResetAt: json['claudeGptWeeklyResetAt'] != null
+          ? DateTime.parse(json['claudeGptWeeklyResetAt'] as String)
           : null,
       isAvailable: json['isAvailable'] as bool? ?? true,
       parseError: json['parseError'] as String?,

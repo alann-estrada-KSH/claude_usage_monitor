@@ -221,6 +221,7 @@ class AccountProvider extends ChangeNotifier {
       _updateAccount(
         accountId,
         (a) => a.copyWith(
+          lastKnownUsage: snapshot,
           lastFetchedAt: DateTime.now(),
           clearLastFetchError: true,
           lastFetchSessionExpired: true,

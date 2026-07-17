@@ -16,7 +16,8 @@ enum AccountProviderType {
   String get defaultLoginUrl => switch (this) {
         AccountProviderType.claude => 'https://claude.ai/login',
         AccountProviderType.codex => 'https://chatgpt.com/',
-        AccountProviderType.antigravity => 'https://aistudio.google.com/',
+        AccountProviderType.antigravity =>
+          'https://accounts.google.com/o/oauth2/v2/auth?client_id=681255809395-oo8ft2oprdrnp9e3aqf6av3hmdib135j.apps.googleusercontent.com&redirect_uri=http://localhost:8080/oauth2callback&response_type=code&scope=https://www.googleapis.com/auth/cloud-platform%20https://www.googleapis.com/auth/userinfo.email%20https://www.googleapis.com/auth/userinfo.profile%20openid&access_type=offline&prompt=consent',
         AccountProviderType.copilot => 'https://github.com/login',
       };
 

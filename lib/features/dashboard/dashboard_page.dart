@@ -143,11 +143,62 @@ class _DashboardPageState extends State<DashboardPage> {
 
   Future<void> _addAccount() async {
     final l10n = AppLocalizations.of(context)!;
+    final provider = context.read<AccountProvider>();
+    final hasAntigravity = provider.accounts.any((a) => a.providerType == AccountProviderType.antigravity);
+
     final selectedProvider = await showDialog<AccountProviderType>(
       context: context,
-      builder: (context) => const _ProviderSelectionDialog(),
+      builder: (context) => _ProviderSelectionDialog(hasAntigravity: hasAntigravity),
     );
     if (selectedProvider == null || !mounted) return;
+
+    if (selectedProvider == AccountProviderType.antigravity) {
+      if (hasAntigravity) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Ya existe una cuenta de Antigravity configurada. Solo se permite 1 cuenta local activa.'),
+          ),
+        );
+        return;
+      }
+
+      final proceed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Antigravity (Cuenta Local)'),
+          content: const Text(
+            'Las métricas de Antigravity se tomarán automáticamente de la cuenta activa que se esté ejecutando en tu sistema (CLI / Antigravity app).\n\n'
+            'No es necesario iniciar sesión mediante navegador.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Continuar'),
+            ),
+          ],
+        ),
+      );
+      if (proceed != true || !mounted) return;
+
+      final label = await showDialog<String>(
+        context: context,
+        builder: (context) => _LabelDialog(
+          initialValue: 'Antigravity',
+          title: l10n.nameAccountDialogTitle,
+          confirmLabel: l10n.save,
+        ),
+      );
+      if (label == null || label.trim().isEmpty || !mounted) return;
+
+      final accountId = DateTime.now().microsecondsSinceEpoch.toString();
+      final account = await provider.addAccount(label.trim(), id: accountId, providerType: AccountProviderType.antigravity);
+      await provider.refreshUsage(account.id);
+      return;
+    }
 
     final label = await showDialog<String>(
       context: context,
@@ -166,7 +217,6 @@ class _DashboardPageState extends State<DashboardPage> {
     );
     if (loggedIn != true || !mounted) return;
 
-    final provider = context.read<AccountProvider>();
     final account = await provider.addAccount(label.trim(), id: accountId, providerType: selectedProvider);
     await provider.refreshUsage(account.id);
   }
@@ -324,7 +374,9 @@ class _EmptyState extends StatelessWidget {
 }
 
 class _ProviderSelectionDialog extends StatelessWidget {
-  const _ProviderSelectionDialog();
+  const _ProviderSelectionDialog({this.hasAntigravity = false});
+
+  final bool hasAntigravity;
 
   @override
   Widget build(BuildContext context) {
@@ -332,7 +384,15 @@ class _ProviderSelectionDialog extends StatelessWidget {
     return SimpleDialog(
       title: Text(l10n.selectProviderTitle),
       children: AccountProviderType.values
-          .where((type) => type != AccountProviderType.antigravity)
+          .where((type) {
+            if (Platform.isAndroid || Platform.isIOS) {
+              if (type == AccountProviderType.antigravity) return false;
+            }
+            if (hasAntigravity && type == AccountProviderType.antigravity) {
+              return false;
+            }
+            return true;
+          })
           .map((type) {
         final icon = switch (type) {
           AccountProviderType.claude => Icons.chat_bubble_outline,
@@ -527,15 +587,39 @@ class _AccountCard extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 8),
-                      OutlinedButton.icon(
-                        onPressed: () => _reconnect(context),
-                        icon: const Icon(Icons.login, size: 18),
-                        label: Text(l10n.reconnectButton),
+                      Row(
+                        children: [
+                          OutlinedButton.icon(
+                            onPressed: () => _reconnect(context),
+                            icon: const Icon(Icons.login, size: 18),
+                            label: Text(l10n.reconnectButton),
+                          ),
+                          if (usage?.rawPageText != null) ...[
+                            const SizedBox(width: 8),
+                            IconButton(
+                              icon: const Icon(Icons.info_outline, size: 20),
+                              tooltip: 'Ver error detallado',
+                              onPressed: () {
+                                showDialog(
+                                  context: context,
+                                  builder: (ctx) => AlertDialog(
+                                    title: const Text('Detalle de API / Diagnostic'),
+                                    content: SingleChildScrollView(
+                                      child: SelectableText(usage!.rawPageText!),
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(ctx),
+                                        child: const Text('Cerrar'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ],
                       ),
-                      if (usage != null) ...[
-                        const SizedBox(height: 12),
-                        _buildUsageBars(context, l10n, usage),
-                      ],
                     ] else if (account.lastFetchError != null && usage == null) ...[
                       const SizedBox(height: 4),
                       Row(
@@ -591,6 +675,68 @@ class _AccountCard extends StatelessWidget {
 
   Widget _buildUsageBars(BuildContext context, AppLocalizations l10n, UsageSnapshot usage) {
     final isCopilot = account.providerType == AccountProviderType.copilot;
+    final isAntigravity = account.providerType == AccountProviderType.antigravity;
+
+    if (isAntigravity) {
+      final hasGemini5h = usage.fiveHourPercent != null || usage.fiveHourResetAt != null;
+      final hasGeminiWeekly = usage.weeklyPercent != null || usage.weeklyResetAt != null;
+      final hasClaude5h = usage.claudeGptFiveHourPercent != null || usage.claudeGptFiveHourResetAt != null;
+      final hasClaudeWeekly = usage.claudeGptWeeklyPercent != null || usage.claudeGptWeeklyResetAt != null;
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (hasGemini5h) ...[
+            UsageBar(
+              label: 'Gemini (5 Horas)',
+              percent: usage.fiveHourPercent,
+              resetAt: usage.fiveHourResetAt,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Sparkline(percent: usage.fiveHourPercent),
+              ),
+            ),
+            if (hasGeminiWeekly || hasClaude5h || hasClaudeWeekly) const SizedBox(height: 14),
+          ],
+          if (hasGeminiWeekly) ...[
+            UsageBar(
+              label: 'Gemini (Semanal)',
+              percent: usage.weeklyPercent,
+              resetAt: usage.weeklyResetAt,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Sparkline(percent: usage.weeklyPercent),
+              ),
+            ),
+            if (hasClaude5h || hasClaudeWeekly) const SizedBox(height: 14),
+          ],
+          if (hasClaude5h) ...[
+            UsageBar(
+              label: 'Claude / GPT (5 Horas)',
+              percent: usage.claudeGptFiveHourPercent,
+              resetAt: usage.claudeGptFiveHourResetAt,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Sparkline(percent: usage.claudeGptFiveHourPercent),
+              ),
+            ),
+            if (hasClaudeWeekly) const SizedBox(height: 14),
+          ],
+          if (hasClaudeWeekly) ...[
+            UsageBar(
+              label: 'Claude / GPT (Semanal)',
+              percent: usage.claudeGptWeeklyPercent,
+              resetAt: usage.claudeGptWeeklyResetAt,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Sparkline(percent: usage.claudeGptWeeklyPercent),
+              ),
+            ),
+          ],
+        ],
+      );
+    }
+
     final hasFiveHour = usage.fiveHourPercent != null || usage.fiveHourResetAt != null;
     final hasWeekly = usage.weeklyPercent != null || usage.weeklyResetAt != null;
     final isMonthly = usage.weeklyResetAt != null &&
@@ -661,6 +807,16 @@ class _AccountCard extends StatelessWidget {
   }
 
   Future<void> _reconnect(BuildContext context) async {
+    if (account.providerType == AccountProviderType.antigravity) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Antigravity obtiene las métricas automáticamente de la cuenta activa en el sistema (localhost/CLI).'),
+        ),
+      );
+      onRefresh();
+      return;
+    }
+
     final loggedIn = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
         builder: (_) => AccountLoginPage(profile: account.id, providerType: account.providerType),

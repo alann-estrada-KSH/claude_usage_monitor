@@ -202,13 +202,14 @@ class _FocusAccountBlock extends StatelessWidget {
 
     Widget body;
 
-    if (sessionExpired && usage == null) {
+    if (sessionExpired) {
       body = _errorRow(context, colors, l10n.sessionExpiredMessage);
     } else if (hasError && usage == null) {
       body = _errorRow(context, colors,
           l10n.usageDataUnavailable(account.lastFetchError ?? l10n.unknownReason));
     } else {
       final isCopilot = account.providerType == AccountProviderType.copilot;
+      final isAntigravity = account.providerType == AccountProviderType.antigravity;
       final hasFiveHour = usage?.fiveHourPercent != null || usage?.fiveHourResetAt != null;
       final hasWeekly = usage?.weeklyPercent != null || usage?.weeklyResetAt != null;
       final isMonthly = usage?.weeklyResetAt != null &&
@@ -217,7 +218,9 @@ class _FocusAccountBlock extends StatelessWidget {
       final firstLabel = isCopilot ? l10n.copilotChatWindow : l10n.fiveHourWindow;
       final secondLabel = isCopilot
           ? l10n.copilotCompletionsWindow
-          : (isMonthly ? l10n.monthlyWindow : l10n.weeklyWindow);
+          : (isAntigravity
+              ? 'Cuota de modelos Antigravity'
+              : (isMonthly ? l10n.monthlyWindow : l10n.weeklyWindow));
 
       body = Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

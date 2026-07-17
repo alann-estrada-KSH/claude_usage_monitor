@@ -54,5 +54,26 @@ void main() {
       expect(sampleMap['plan_type'], 'plus');
       expect((sampleMap['rate_limit'] as Map)['primary_window']['used_percent'], 21);
     });
+
+    test('Antigravity fetchAvailableModels JSON parsing sample', () {
+      final sampleAntigravityJsonStr = '''
+{
+  "models": {
+    "gemini-2.5-flash": {
+      "quotaInfo": {
+        "remainingFraction": 0.75,
+        "resetTime": "2026-07-17T18:00:00Z"
+      }
+    }
+  }
+}
+''';
+      final map = jsonDecode(sampleAntigravityJsonStr) as Map<String, dynamic>;
+      final modelsMap = map['models'] as Map<String, dynamic>;
+      final model = modelsMap['gemini-2.5-flash'] as Map<String, dynamic>;
+      final quota = model['quotaInfo'] as Map<String, dynamic>;
+      final remaining = (quota['remainingFraction'] as num).toDouble();
+      expect((1.0 - remaining) * 100.0, 25.0);
+    });
   });
 }

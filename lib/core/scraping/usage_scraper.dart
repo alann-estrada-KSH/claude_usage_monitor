@@ -23,14 +23,25 @@ class UsageScraper {
     AccountProviderType providerType = AccountProviderType.claude,
   }) async {
     try {
-      final cookieHeader = Platform.isAndroid
-          ? await _cookieHeaderAndroid(profile, providerType: providerType)
-          : await fetchCookieHeaderDesktop(
-              timeout: timeout,
-              profile: profile,
-              providerType: providerType,
-            );
-      if (cookieHeader.trim().isEmpty) {
+      String cookieHeader = '';
+      if (profile != null) {
+        final stored = await _androidCookies.read(profile);
+        if (stored != null && stored.isNotEmpty) {
+          cookieHeader = stored;
+        }
+      }
+
+      if (cookieHeader.trim().isEmpty && providerType != AccountProviderType.antigravity) {
+        cookieHeader = Platform.isAndroid
+            ? await _cookieHeaderAndroid(profile, providerType: providerType)
+            : await fetchCookieHeaderDesktop(
+                timeout: timeout,
+                profile: profile,
+                providerType: providerType,
+              );
+      }
+
+      if (cookieHeader.trim().isEmpty && providerType != AccountProviderType.antigravity) {
         return UsageSnapshot.unavailable('No session cookies found -- log in first');
       }
       return await _apiClient.fetchUsage(cookieHeader, providerType: providerType);
