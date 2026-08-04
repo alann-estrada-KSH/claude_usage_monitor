@@ -931,6 +931,108 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Select provider'**
   String get selectProviderTitle;
+
+  /// No description provided for @apiConnectionErrorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not connect to the API'**
+  String get apiConnectionErrorTitle;
+
+  /// No description provided for @apiConnectionErrorReasonsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Possible reasons for this failure:'**
+  String get apiConnectionErrorReasonsTitle;
+
+  /// No description provided for @apiConnectionReasonCliClosed.
+  ///
+  /// In en, this message translates to:
+  /// **'The Antigravity CLI or Desktop app is closed or not running.'**
+  String get apiConnectionReasonCliClosed;
+
+  /// No description provided for @apiConnectionReasonNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'No internet connection or local/remote server is unresponsive.'**
+  String get apiConnectionReasonNetwork;
+
+  /// No description provided for @apiConnectionReasonSession.
+  ///
+  /// In en, this message translates to:
+  /// **'Session or OAuth token expired or is not configured.'**
+  String get apiConnectionReasonSession;
+
+  /// No description provided for @apiConnectionReasonFirewall.
+  ///
+  /// In en, this message translates to:
+  /// **'Firewall or network settings block connections to 127.0.0.1 or the API.'**
+  String get apiConnectionReasonFirewall;
+
+  /// No description provided for @viewPossibleReasons.
+  ///
+  /// In en, this message translates to:
+  /// **'View possible causes'**
+  String get viewPossibleReasons;
+
+  /// No description provided for @hidePossibleReasons.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide causes'**
+  String get hidePossibleReasons;
+
+  /// No description provided for @retryConnection.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry connection'**
+  String get retryConnection;
+
+  /// No description provided for @copilotReasonSession.
+  ///
+  /// In en, this message translates to:
+  /// **'GitHub session expired or no active GitHub Copilot subscription.'**
+  String get copilotReasonSession;
+
+  /// No description provided for @copilotReason2FA.
+  ///
+  /// In en, this message translates to:
+  /// **'Two-factor authentication (2FA) or device verification required by GitHub.'**
+  String get copilotReason2FA;
+
+  /// No description provided for @copilotReasonNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'No internet connection or GitHub API (api.github.com) is unresponsive.'**
+  String get copilotReasonNetwork;
+
+  /// No description provided for @copilotReasonFirewall.
+  ///
+  /// In en, this message translates to:
+  /// **'Network, proxy, or VPN blocking connections to GitHub.'**
+  String get copilotReasonFirewall;
+
+  /// No description provided for @codexReasonSession.
+  ///
+  /// In en, this message translates to:
+  /// **'ChatGPT/OpenAI session not signed in or expired.'**
+  String get codexReasonSession;
+
+  /// No description provided for @codexReasonCloudflare.
+  ///
+  /// In en, this message translates to:
+  /// **'Cloudflare or Arkose security check requires logging in again.'**
+  String get codexReasonCloudflare;
+
+  /// No description provided for @codexReasonNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'No internet connection or ChatGPT servers are unresponsive.'**
+  String get codexReasonNetwork;
+
+  /// No description provided for @codexReasonFirewall.
+  ///
+  /// In en, this message translates to:
+  /// **'Network or VPN blocking access to chatgpt.com.'**
+  String get codexReasonFirewall;
 }
 
 class _AppLocalizationsDelegate

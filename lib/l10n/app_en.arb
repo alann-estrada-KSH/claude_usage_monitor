@@ -236,5 +236,22 @@
   "monthlyWindow": "Monthly limit (30 days)",
   "copilotChatWindow": "Copilot Chat",
   "copilotCompletionsWindow": "Copilot Completions",
-  "selectProviderTitle": "Select provider"
+  "selectProviderTitle": "Select provider",
+  "apiConnectionErrorTitle": "Could not connect to the API",
+  "apiConnectionErrorReasonsTitle": "Possible reasons for this failure:",
+  "apiConnectionReasonCliClosed": "The Antigravity CLI or Desktop app is closed or not running.",
+  "apiConnectionReasonNetwork": "No internet connection or local/remote server is unresponsive.",
+  "apiConnectionReasonSession": "Session or OAuth token expired or is not configured.",
+  "apiConnectionReasonFirewall": "Firewall or network settings block connections to 127.0.0.1 or the API.",
+  "viewPossibleReasons": "View possible causes",
+  "hidePossibleReasons": "Hide causes",
+  "retryConnection": "Retry connection",
+  "copilotReasonSession": "GitHub session expired or no active GitHub Copilot subscription.",
+  "copilotReason2FA": "Two-factor authentication (2FA) or device verification required by GitHub.",
+  "copilotReasonNetwork": "No internet connection or GitHub API (api.github.com) is unresponsive.",
+  "copilotReasonFirewall": "Network, proxy, or VPN blocking connections to GitHub.",
+  "codexReasonSession": "ChatGPT/OpenAI session not signed in or expired.",
+  "codexReasonCloudflare": "Cloudflare or Arkose security check requires logging in again.",
+  "codexReasonNetwork": "No internet connection or ChatGPT servers are unresponsive.",
+  "codexReasonFirewall": "Network or VPN blocking access to chatgpt.com."
 }

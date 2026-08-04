@@ -480,4 +480,68 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get selectProviderTitle => 'Select provider';
+
+  @override
+  String get apiConnectionErrorTitle => 'Could not connect to the API';
+
+  @override
+  String get apiConnectionErrorReasonsTitle =>
+      'Possible reasons for this failure:';
+
+  @override
+  String get apiConnectionReasonCliClosed =>
+      'The Antigravity CLI or Desktop app is closed or not running.';
+
+  @override
+  String get apiConnectionReasonNetwork =>
+      'No internet connection or local/remote server is unresponsive.';
+
+  @override
+  String get apiConnectionReasonSession =>
+      'Session or OAuth token expired or is not configured.';
+
+  @override
+  String get apiConnectionReasonFirewall =>
+      'Firewall or network settings block connections to 127.0.0.1 or the API.';
+
+  @override
+  String get viewPossibleReasons => 'View possible causes';
+
+  @override
+  String get hidePossibleReasons => 'Hide causes';
+
+  @override
+  String get retryConnection => 'Retry connection';
+
+  @override
+  String get copilotReasonSession =>
+      'GitHub session expired or no active GitHub Copilot subscription.';
+
+  @override
+  String get copilotReason2FA =>
+      'Two-factor authentication (2FA) or device verification required by GitHub.';
+
+  @override
+  String get copilotReasonNetwork =>
+      'No internet connection or GitHub API (api.github.com) is unresponsive.';
+
+  @override
+  String get copilotReasonFirewall =>
+      'Network, proxy, or VPN blocking connections to GitHub.';
+
+  @override
+  String get codexReasonSession =>
+      'ChatGPT/OpenAI session not signed in or expired.';
+
+  @override
+  String get codexReasonCloudflare =>
+      'Cloudflare or Arkose security check requires logging in again.';
+
+  @override
+  String get codexReasonNetwork =>
+      'No internet connection or ChatGPT servers are unresponsive.';
+
+  @override
+  String get codexReasonFirewall =>
+      'Network or VPN blocking access to chatgpt.com.';
 }

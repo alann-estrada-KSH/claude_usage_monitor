@@ -4,6 +4,7 @@ import 'package:crypto/crypto.dart';
 
 import '../models/provider_type.dart';
 import '../models/usage_snapshot.dart';
+import 'opencode_workspace_store.dart';
 
 /// Fetches usage data straight from provider internal JSON APIs
 /// (Claude, Codex/ChatGPT, and Antigravity) using authenticated session cookies/tokens.
@@ -13,6 +14,8 @@ class UsageApiClient {
   static const _claudeOrgsUrl = 'https://claude.ai/api/organizations';
   static const _codexUsageUrl = 'https://chatgpt.com/backend-api/wham/usage';
   static const _codexSessionUrl = 'https://chatgpt.com/api/auth/session';
+  static const _openCodeGoBaseUrl = 'https://opencode.ai';
+  static const _openCodeWorkspaces = OpenCodeWorkspaceStore();
 
   // No request in this file previously had a timeout -- a stalled connection
   // (slow network, a throttled/rate-limited endpoint) hung the whole fetch
@@ -22,32 +25,45 @@ class UsageApiClient {
   Future<UsageSnapshot> fetchUsage(
     String cookieHeader, {
     AccountProviderType providerType = AccountProviderType.claude,
+    String? accountId,
   }) async {
     return switch (providerType) {
       AccountProviderType.claude => _fetchClaudeUsage(cookieHeader),
       AccountProviderType.codex => _fetchCodexUsage(cookieHeader),
       AccountProviderType.antigravity => _fetchAntigravityUsage(cookieHeader),
       AccountProviderType.copilot => _fetchCopilotUsage(cookieHeader),
+      AccountProviderType.openCodeGo => _fetchOpenCodeGoUsage(
+        cookieHeader,
+        accountId,
+      ),
     };
   }
 
   Future<UsageSnapshot> _fetchClaudeUsage(String cookieHeader) async {
     final client = HttpClient();
     try {
-      final orgs = await _getJson(client, Uri.parse(_claudeOrgsUrl), cookieHeader);
+      final orgs = await _getJson(
+        client,
+        Uri.parse(_claudeOrgsUrl),
+        cookieHeader,
+      );
       if (orgs is! List || orgs.isEmpty) {
-        return UsageSnapshot.unavailable('No organizations found for this account');
+        return UsageSnapshot.unavailable(
+          'No organizations found for this account',
+        );
       }
 
       Map<String, dynamic>? fallback;
       for (final org in orgs) {
         final uuid = (org as Map)['uuid'] as String?;
         if (uuid == null || uuid.isEmpty) continue;
-        final usage = await _getJson(
-          client,
-          Uri.parse('https://claude.ai/api/organizations/$uuid/usage'),
-          cookieHeader,
-        ) as Map<String, dynamic>;
+        final usage =
+            await _getJson(
+                  client,
+                  Uri.parse('https://claude.ai/api/organizations/$uuid/usage'),
+                  cookieHeader,
+                )
+                as Map<String, dynamic>;
         fallback ??= usage;
         if (_hasClaudeActivity(usage)) return _parseClaudeUsage(usage);
       }
@@ -65,7 +81,9 @@ class UsageApiClient {
           sessionExpired: true,
         );
       }
-      return UsageSnapshot.unavailable('Claude API request failed: ${e.message}');
+      return UsageSnapshot.unavailable(
+        'Claude API request failed: ${e.message}',
+      );
     } finally {
       client.close(force: true);
     }
@@ -76,7 +94,11 @@ class UsageApiClient {
     try {
       String? bearerToken;
       try {
-        final session = await _getJson(client, Uri.parse(_codexSessionUrl), cookieHeader);
+        final session = await _getJson(
+          client,
+          Uri.parse(_codexSessionUrl),
+          cookieHeader,
+        );
         if (session is Map && session.containsKey('accessToken')) {
           bearerToken = session['accessToken'] as String?;
         }
@@ -84,12 +106,14 @@ class UsageApiClient {
         // Fallback: If session call fails, proceed with cookies directly
       }
 
-      final usageJson = await _getJson(
-        client,
-        Uri.parse(_codexUsageUrl),
-        cookieHeader,
-        bearerToken: bearerToken,
-      ) as Map<String, dynamic>;
+      final usageJson =
+          await _getJson(
+                client,
+                Uri.parse(_codexUsageUrl),
+                cookieHeader,
+                bearerToken: bearerToken,
+              )
+              as Map<String, dynamic>;
 
       return _parseCodexUsage(usageJson);
     } on _ApiHttpException catch (e) {
@@ -99,7 +123,9 @@ class UsageApiClient {
           sessionExpired: true,
         );
       }
-      return UsageSnapshot.unavailable('Codex Usage API request failed: ${e.message}');
+      return UsageSnapshot.unavailable(
+        'Codex Usage API request failed: ${e.message}',
+      );
     } finally {
       client.close(force: true);
     }
@@ -130,9 +156,12 @@ class UsageApiClient {
         sessionExpired: true,
         rawPageText: jsonEncode({
           'provider': 'antigravity',
-          'error': 'No OAuth 2 bearer token found in input or ~/.gemini/oauth_creds.json',
+          'error':
+              'No OAuth 2 bearer token found in input or ~/.gemini/oauth_creds.json',
           'cookieHeaderLength': cookieHeader.length,
-          'cookieHeaderSample': cookieHeader.length > 60 ? cookieHeader.substring(0, 60) + '...' : cookieHeader,
+          'cookieHeaderSample': cookieHeader.length > 60
+              ? cookieHeader.substring(0, 60) + '...'
+              : cookieHeader,
         }),
       );
     }
@@ -142,7 +171,9 @@ class UsageApiClient {
       try {
         final res = await _postJson(
           client,
-          Uri.parse('https://cloudcode-pa.googleapis.com/v1internal:loadCodeAssist'),
+          Uri.parse(
+            'https://cloudcode-pa.googleapis.com/v1internal:loadCodeAssist',
+          ),
           '',
           <String, dynamic>{},
           bearerToken: bearerToken,
@@ -161,7 +192,9 @@ class UsageApiClient {
               try {
                 final resRetry = await _postJson(
                   client,
-                  Uri.parse('https://cloudcode-pa.googleapis.com/v1internal:loadCodeAssist'),
+                  Uri.parse(
+                    'https://cloudcode-pa.googleapis.com/v1internal:loadCodeAssist',
+                  ),
                   '',
                   <String, dynamic>{},
                   bearerToken: bearerToken,
@@ -183,7 +216,9 @@ class UsageApiClient {
               rawPageText: jsonEncode({
                 'provider': 'antigravity',
                 'tokenSource': tokenSource,
-                'tokenSample': bearerToken.length > 20 ? bearerToken.substring(0, 20) + '...' : bearerToken,
+                'tokenSample': bearerToken.length > 20
+                    ? bearerToken.substring(0, 20) + '...'
+                    : bearerToken,
                 'apiError': e.toString(),
               }),
             );
@@ -195,7 +230,8 @@ class UsageApiClient {
         lastError = e.toString();
       }
 
-      final realProjId = codeAssistJson?['cloudaicompanionProject'] as String? ?? '';
+      final realProjId =
+          codeAssistJson?['cloudaicompanionProject'] as String? ?? '';
 
       // loadCodeAssist accepts a wider range of tokens than the quota RPCs
       // do, so a stale/under-scoped access token can sail through it and
@@ -260,13 +296,16 @@ class UsageApiClient {
 
         final headersForProject = {
           ...quotaHeaders,
-          if (candidateProject.isNotEmpty) 'x-goog-user-project': candidateProject,
+          if (candidateProject.isNotEmpty)
+            'x-goog-user-project': candidateProject,
         };
 
         try {
           final summaryJson = await _postJson(
             client,
-            Uri.parse('https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuotaSummary'),
+            Uri.parse(
+              'https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuotaSummary',
+            ),
             '',
             payload,
             bearerToken: bearerToken,
@@ -277,14 +316,17 @@ class UsageApiClient {
             return _parseAntigravityQuotaSummary(summaryJson);
           }
         } catch (e) {
-          candidateErrors['$candidateProject/retrieveUserQuotaSummary'] = e.toString();
+          candidateErrors['$candidateProject/retrieveUserQuotaSummary'] = e
+              .toString();
           serviceDisabledActivationUrl ??= _extractActivationUrl(e.toString());
         }
 
         try {
           final usageJson = await _postJson(
             client,
-            Uri.parse('https://cloudcode-pa.googleapis.com/v1internal:fetchAvailableModels'),
+            Uri.parse(
+              'https://cloudcode-pa.googleapis.com/v1internal:fetchAvailableModels',
+            ),
             '',
             payload,
             bearerToken: bearerToken,
@@ -295,12 +337,15 @@ class UsageApiClient {
             return _parseAntigravityUsage(usageJson);
           }
         } catch (e) {
-          candidateErrors['$candidateProject/fetchAvailableModels'] = e.toString();
+          candidateErrors['$candidateProject/fetchAvailableModels'] = e
+              .toString();
           serviceDisabledActivationUrl ??= _extractActivationUrl(e.toString());
         }
       }
 
-      lastError = candidateErrors.values.isNotEmpty ? candidateErrors.values.last : lastError;
+      lastError = candidateErrors.values.isNotEmpty
+          ? candidateErrors.values.last
+          : lastError;
 
       if (serviceDisabledActivationUrl != null) {
         return UsageSnapshot.unavailable(
@@ -319,9 +364,13 @@ class UsageApiClient {
       final projId = realProjId;
 
       if (codeAssistJson != null) {
-        final currentTier = codeAssistJson['currentTier'] as Map<String, dynamic>?;
+        final currentTier =
+            codeAssistJson['currentTier'] as Map<String, dynamic>?;
         final paidTier = codeAssistJson['paidTier'] as Map<String, dynamic>?;
-        final tierName = paidTier?['name'] as String? ?? currentTier?['name'] as String? ?? 'Antigravity';
+        final tierName =
+            paidTier?['name'] as String? ??
+            currentTier?['name'] as String? ??
+            'Antigravity';
         final tierId = currentTier?['id'] as String? ?? 'free-tier';
         return UsageSnapshot(
           fetchedAt: DateTime.now(),
@@ -360,7 +409,9 @@ class UsageApiClient {
 
   String? _extractActivationUrl(String errorText) {
     if (!errorText.contains('SERVICE_DISABLED')) return null;
-    final match = RegExp(r'"activationUrl"\s*:\s*"([^"]+)"').firstMatch(errorText);
+    final match = RegExp(
+      r'"activationUrl"\s*:\s*"([^"]+)"',
+    ).firstMatch(errorText);
     return match?.group(1);
   }
 
@@ -397,17 +448,35 @@ class UsageApiClient {
   Future<String?> _refreshGoogleAccessToken(String refreshToken) async {
     final client = HttpClient();
     try {
-      final req = await client.postUrl(Uri.parse('https://oauth2.googleapis.com/token'));
+      final req = await client.postUrl(
+        Uri.parse('https://oauth2.googleapis.com/token'),
+      );
       req.headers.set('content-type', 'application/x-www-form-urlencoded');
-      final clientId = utf8.decode(base64Decode(['NjgxMjU1ODA5Mzk1LW9vOGZ0Mm9wcm', 'RybnA5ZTNhcWY2YXYzaG1kaWIxMzVq', 'LmFwcHMuZ29vZ2xldXNlcmNvbnRlbnQuY29t'].join('')));
-      final clientSecret = utf8.decode(base64Decode(['R09DU1BYLTR1SGdN', 'UG0tMW83U2stZ2VWNkN1', 'NWNsWEZzeGw='].join('')));
-      final body = 'refresh_token=${Uri.encodeQueryComponent(refreshToken)}'
+      final clientId = utf8.decode(
+        base64Decode(
+          [
+            'NjgxMjU1ODA5Mzk1LW9vOGZ0Mm9wcm',
+            'RybnA5ZTNhcWY2YXYzaG1kaWIxMzVq',
+            'LmFwcHMuZ29vZ2xldXNlcmNvbnRlbnQuY29t',
+          ].join(''),
+        ),
+      );
+      final clientSecret = utf8.decode(
+        base64Decode(
+          ['R09DU1BYLTR1SGdN', 'UG0tMW83U2stZ2VWNkN1', 'NWNsWEZzeGw='].join(''),
+        ),
+      );
+      final body =
+          'refresh_token=${Uri.encodeQueryComponent(refreshToken)}'
           '&client_id=${Uri.encodeQueryComponent(clientId)}'
           '&client_secret=${Uri.encodeQueryComponent(clientSecret)}'
           '&grant_type=refresh_token';
       req.write(body);
       final res = await req.close().timeout(_requestTimeout);
-      final resBody = await res.transform(utf8.decoder).join().timeout(_requestTimeout);
+      final resBody = await res
+          .transform(utf8.decoder)
+          .join()
+          .timeout(_requestTimeout);
       if (res.statusCode == 200) {
         final json = jsonDecode(resBody);
         if (json is Map && json.containsKey('access_token')) {
@@ -423,7 +492,8 @@ class UsageApiClient {
 
   String? _loadDesktopAntigravityToken() {
     try {
-      final home = Platform.environment['HOME'] ?? Platform.environment['USERPROFILE'];
+      final home =
+          Platform.environment['HOME'] ?? Platform.environment['USERPROFILE'];
       if (home == null || home.isEmpty) return null;
       final file = File('$home/.gemini/oauth_creds.json');
       if (file.existsSync()) {
@@ -455,19 +525,29 @@ class UsageApiClient {
             final uri = Uri.parse(
               '$scheme://127.0.0.1:$port/exa.language_server_pb.LanguageServerService/RetrieveUserQuotaSummary',
             );
-            final req = await client.postUrl(uri).timeout(const Duration(milliseconds: 1500));
+            final req = await client
+                .postUrl(uri)
+                .timeout(const Duration(milliseconds: 1500));
             req.headers.set('Content-Type', 'application/json');
             req.headers.set('Connect-Protocol-Version', '1');
             req.write('{}');
-            final res = await req.close().timeout(const Duration(milliseconds: 1500));
+            final res = await req.close().timeout(
+              const Duration(milliseconds: 1500),
+            );
             if (res.statusCode == 200) {
-              final body = await res.transform(utf8.decoder).join().timeout(const Duration(milliseconds: 1500));
+              final body = await res
+                  .transform(utf8.decoder)
+                  .join()
+                  .timeout(const Duration(milliseconds: 1500));
               final json = jsonDecode(body);
               if (json is Map<String, dynamic>) {
                 final root = json.containsKey('groups')
                     ? json
-                    : (json['response'] as Map<String, dynamic>? ?? json['body'] as Map<String, dynamic>? ?? json);
-                if (root['groups'] is List && (root['groups'] as List).isNotEmpty) {
+                    : (json['response'] as Map<String, dynamic>? ??
+                          json['body'] as Map<String, dynamic>? ??
+                          json);
+                if (root['groups'] is List &&
+                    (root['groups'] as List).isNotEmpty) {
                   return json;
                 }
               }
@@ -485,7 +565,12 @@ class UsageApiClient {
     final ports = <int>{};
     try {
       if (Platform.isLinux || Platform.isMacOS) {
-        final res = await Process.run('lsof', ['-iTCP', '-sTCP:LISTEN', '-P', '-n']);
+        final res = await Process.run('lsof', [
+          '-iTCP',
+          '-sTCP:LISTEN',
+          '-P',
+          '-n',
+        ]);
         if (res.exitCode == 0) {
           for (final line in LineSplitter.split(res.stdout.toString())) {
             final lower = line.toLowerCase();
@@ -581,7 +666,9 @@ class UsageApiClient {
     // Some responses nest the payload under "response" or "body".
     final root = json.containsKey('groups')
         ? json
-        : (json['response'] as Map<String, dynamic>? ?? json['body'] as Map<String, dynamic>? ?? json);
+        : (json['response'] as Map<String, dynamic>? ??
+              json['body'] as Map<String, dynamic>? ??
+              json);
 
     final groups = root['groups'];
     if (groups is! List || groups.isEmpty) {
@@ -593,35 +680,51 @@ class UsageApiClient {
 
     for (final group in groups) {
       if (group is! Map<String, dynamic>) continue;
-      final groupName = ((group['displayName'] ?? group['display_name']) as String? ?? '').toLowerCase();
-      final isClaudeGpt = groupName.contains('claude') || groupName.contains('gpt') || groupName.contains('3p');
+      final groupName =
+          ((group['displayName'] ?? group['display_name']) as String? ?? '')
+              .toLowerCase();
+      final isClaudeGpt =
+          groupName.contains('claude') ||
+          groupName.contains('gpt') ||
+          groupName.contains('3p');
 
       final buckets = group['buckets'];
       if (buckets is! List) continue;
       for (final bucket in buckets) {
         if (bucket is! Map<String, dynamic>) continue;
         final remainingFraction =
-            (bucket['remainingFraction'] ?? bucket['remaining_fraction'] as num?)?.toDouble();
+            (bucket['remainingFraction'] ??
+                    bucket['remaining_fraction'] as num?)
+                ?.toDouble();
         if (remainingFraction == null) continue;
         final usedPercent = (1.0 - remainingFraction) * 100.0;
         final resetAt = _parseIso(
-            bucket['resetTime'] as String? ?? bucket['reset_time'] as String?);
+          bucket['resetTime'] as String? ?? bucket['reset_time'] as String?,
+        );
         final displayName =
-            ((bucket['displayName'] ?? bucket['display_name']) as String?)?.toLowerCase() ?? '';
+            ((bucket['displayName'] ?? bucket['display_name']) as String?)
+                ?.toLowerCase() ??
+            '';
         final windowSeconds =
-            int.tryParse((bucket['window'] as String? ?? '').replaceAll('s', '')) ?? 0;
-        final isFiveHour = displayName.contains('five hour') ||
+            int.tryParse(
+              (bucket['window'] as String? ?? '').replaceAll('s', ''),
+            ) ??
+            0;
+        final isFiveHour =
+            displayName.contains('five hour') ||
             displayName.contains('5 hour') ||
             (windowSeconds > 0 && windowSeconds <= 6 * 3600);
 
         if (isClaudeGpt) {
           if (isFiveHour) {
-            if (claudeGptFiveHourPercent == null || usedPercent > claudeGptFiveHourPercent) {
+            if (claudeGptFiveHourPercent == null ||
+                usedPercent > claudeGptFiveHourPercent) {
               claudeGptFiveHourPercent = usedPercent;
               claudeGptFiveHourResetAt = resetAt;
             }
           } else {
-            if (claudeGptWeeklyPercent == null || usedPercent > claudeGptWeeklyPercent) {
+            if (claudeGptWeeklyPercent == null ||
+                usedPercent > claudeGptWeeklyPercent) {
               claudeGptWeeklyPercent = usedPercent;
               claudeGptWeeklyResetAt = resetAt;
             }
@@ -672,7 +775,8 @@ class UsageApiClient {
       if (model is! Map<String, dynamic>) continue;
       final quotaInfo = model['quotaInfo'] as Map<String, dynamic>?;
       if (quotaInfo != null) {
-        final remainingFraction = (quotaInfo['remainingFraction'] as num?)?.toDouble();
+        final remainingFraction = (quotaInfo['remainingFraction'] as num?)
+            ?.toDouble();
         if (remainingFraction != null) {
           final u = (1.0 - remainingFraction) * 100.0;
           if (usagePercent == null || u > usagePercent) {
@@ -708,9 +812,7 @@ class UsageApiClient {
         Uri.parse('https://github.com/github-copilot/chat/entitlement'),
         cookieHeader,
         referer: 'https://github.com/github-copilot/chat',
-        headers: {
-          'X-Requested-With': 'XMLHttpRequest',
-        },
+        headers: {'X-Requested-With': 'XMLHttpRequest'},
       );
       if (entitlementJson is Map<String, dynamic>) {
         return _parseCopilotUsage(entitlementJson);
@@ -771,7 +873,8 @@ class UsageApiClient {
     if (quotas != null) {
       final chatQuota = quotas['chatQuota'] as Map<String, dynamic>?;
       if (chatQuota != null) {
-        final percentRemaining = (chatQuota['percentRemaining'] as num?)?.toDouble();
+        final percentRemaining = (chatQuota['percentRemaining'] as num?)
+            ?.toDouble();
         if (percentRemaining != null) {
           chatPercent = 100.0 - percentRemaining;
         } else {
@@ -783,9 +886,11 @@ class UsageApiClient {
         }
       }
 
-      final completionsQuota = quotas['completionsQuota'] as Map<String, dynamic>?;
+      final completionsQuota =
+          quotas['completionsQuota'] as Map<String, dynamic>?;
       if (completionsQuota != null) {
-        final percentRemaining = (completionsQuota['percentRemaining'] as num?)?.toDouble();
+        final percentRemaining = (completionsQuota['percentRemaining'] as num?)
+            ?.toDouble();
         if (percentRemaining != null) {
           completionsPercent = 100.0 - percentRemaining;
         } else {
@@ -813,6 +918,225 @@ class UsageApiClient {
     );
   }
 
+  /// OpenCode Go has no public usage API (see upstream feature request
+  /// anomalyco/opencode#31084, closed with no implementation) -- this scrapes
+  /// the authenticated dashboard HTML instead, same technique as the
+  /// community `opencode-quota` tool.
+  Future<UsageSnapshot> _fetchOpenCodeGoUsage(
+    String cookieHeader,
+    String? accountId,
+  ) async {
+    final client = HttpClient();
+    try {
+      final storedWorkspaceId = accountId == null
+          ? null
+          : await _openCodeWorkspaces.read(accountId);
+      final workspaceId =
+          storedWorkspaceId ??
+          await _discoverOpenCodeGoWorkspaceId(client, cookieHeader);
+      if (workspaceId == null) {
+        return UsageSnapshot.unavailable(
+          'OpenCode Go: could not find your workspace -- reconnect this account to capture it',
+        );
+      }
+
+      final html = await _getHtml(
+        client,
+        Uri.parse('$_openCodeGoBaseUrl/workspace/$workspaceId/go'),
+        cookieHeader,
+        referer: '$_openCodeGoBaseUrl/workspace/$workspaceId',
+      );
+      return _parseOpenCodeGoUsage(html);
+    } on _ApiHttpException catch (e) {
+      return UsageSnapshot.unavailable(
+        'OpenCode Go: ${e.message}',
+        sessionExpired: e.isAuthError,
+      );
+    } catch (e) {
+      return UsageSnapshot.unavailable('OpenCode Go: $e');
+    } finally {
+      client.close(force: true);
+    }
+  }
+
+  /// The dashboard route is `/workspace/{id}/go`; the workspace id isn't in
+  /// any cookie, so it's discovered by loading the authenticated homepage
+  /// (which links/redirects into the user's workspace) and grabbing the
+  /// first `/workspace/{id}` path out of the HTML.
+  Future<String?> _discoverOpenCodeGoWorkspaceId(
+    HttpClient client,
+    String cookieHeader,
+  ) async {
+    final html = await _getHtml(
+      client,
+      Uri.parse('$_openCodeGoBaseUrl/'),
+      cookieHeader,
+    );
+    final match = RegExp(r'/workspace/([a-zA-Z0-9_-]+)').firstMatch(html);
+    return match?.group(1);
+  }
+
+  /// Parses OpenCode Go's dashboard HTML. Two known formats seen in the
+  /// wild: SolidJS SSR hydration blobs (`rollingUsage:$R[n]={usagePercent:
+  /// ...,resetInSec:...}`) and newer `data-slot="usage-*"` markup. Field
+  /// order within the blob isn't guaranteed, so both orderings are tried.
+  UsageSnapshot _parseOpenCodeGoUsage(String html) {
+    final rolling =
+        _parseOpenCodeGoWindow(html, 'rollingUsage') ??
+        _parseOpenCodeGoDataSlotWindow(html, 'rolling');
+    final weekly =
+        _parseOpenCodeGoWindow(html, 'weeklyUsage') ??
+        _parseOpenCodeGoDataSlotWindow(html, 'weekly');
+    final monthly =
+        _parseOpenCodeGoWindow(html, 'monthlyUsage') ??
+        _parseOpenCodeGoDataSlotWindow(html, 'monthly');
+
+    if (rolling == null && weekly == null && monthly == null) {
+      return UsageSnapshot.unavailable(
+        'OpenCode Go: could not parse usage from dashboard (layout may have changed)',
+        rawPageText: html,
+      );
+    }
+
+    final now = DateTime.now();
+    return UsageSnapshot(
+      fetchedAt: now,
+      fiveHourPercent: rolling?.$1,
+      fiveHourResetAt: rolling == null
+          ? null
+          : now.add(Duration(seconds: rolling.$2)),
+      weeklyPercent: weekly?.$1,
+      weeklyResetAt: weekly == null
+          ? null
+          : now.add(Duration(seconds: weekly.$2)),
+      monthlyPercent: monthly?.$1,
+      monthlyResetAt: monthly == null
+          ? null
+          : now.add(Duration(seconds: monthly.$2)),
+      rawPageText: html,
+    );
+  }
+
+  (double, int)? _parseOpenCodeGoWindow(String html, String field) {
+    final num = r'(-?\d+(?:\.\d+)?)';
+    final pctFirst = RegExp(
+      '$field:\\\$R\\[\\d+\\]=\\{[^}]*usagePercent:$num[^}]*resetInSec:$num[^}]*\\}',
+    ).firstMatch(html);
+    if (pctFirst != null) {
+      return (
+        double.parse(pctFirst.group(1)!),
+        double.parse(pctFirst.group(2)!).round(),
+      );
+    }
+    final resetFirst = RegExp(
+      '$field:\\\$R\\[\\d+\\]=\\{[^}]*resetInSec:$num[^}]*usagePercent:$num[^}]*\\}',
+    ).firstMatch(html);
+    if (resetFirst != null) {
+      return (
+        double.parse(resetFirst.group(2)!),
+        double.parse(resetFirst.group(1)!).round(),
+      );
+    }
+    return null;
+  }
+
+  (double, int)? _parseOpenCodeGoDataSlotWindow(
+    String html,
+    String windowLabel,
+  ) {
+    for (final chunk in html.split('data-slot="usage-item"').skip(1)) {
+      final label = RegExp(
+        r'data-slot="usage-label">([^<]+)<',
+      ).firstMatch(chunk)?.group(1);
+      if (label == null || !label.toLowerCase().contains(windowLabel)) continue;
+
+      final usageMatch = RegExp(
+        r'data-slot="usage-value">[^0-9]*(\d+(?:\.\d+)?)',
+      ).firstMatch(chunk);
+      if (usageMatch == null) continue;
+
+      final resetMatch = RegExp(
+        r'data-slot="(reset-time|reset-now)">([\s\S]*?)</span>',
+      ).firstMatch(chunk);
+      if (resetMatch == null) continue;
+
+      final resetInSec = resetMatch.group(1) == 'reset-now'
+          ? 0
+          : _parseOpenCodeGoHumanDuration(
+              resetMatch
+                  .group(2)!
+                  .replaceAll('<!--\$-->', '')
+                  .replaceAll('<!--/-->', '')
+                  .replaceAll(
+                    RegExp(r'Resets?\s*in\s*', caseSensitive: false),
+                    '',
+                  )
+                  .trim(),
+            );
+      if (resetInSec == null) continue;
+
+      return (double.parse(usageMatch.group(1)!), resetInSec);
+    }
+    return null;
+  }
+
+  int? _parseOpenCodeGoHumanDuration(String text) {
+    final normalized = text.toLowerCase().trim();
+    if (['reset-now', 'reset now', 'now', 'resets now'].contains(normalized)) {
+      return 0;
+    }
+
+    var totalSeconds = 0;
+    var matchedAny = false;
+    for (final (pattern, unitSeconds) in [
+      (r'(\d+(?:\.\d+)?)\s*days?', 86400),
+      (r'(\d+(?:\.\d+)?)\s*hours?', 3600),
+      (r'(\d+(?:\.\d+)?)\s*minutes?', 60),
+      (r'(\d+(?:\.\d+)?)\s*seconds?', 1),
+    ]) {
+      final match = RegExp(pattern).firstMatch(normalized);
+      if (match == null) continue;
+      matchedAny = true;
+      totalSeconds += (double.parse(match.group(1)!) * unitSeconds).round();
+    }
+    return matchedAny ? totalSeconds : null;
+  }
+
+  Future<String> _getHtml(
+    HttpClient client,
+    Uri uri,
+    String cookieHeader, {
+    String? referer,
+  }) async {
+    final request = await client.getUrl(uri);
+    request.headers.set(
+      HttpHeaders.userAgentHeader,
+      'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    );
+    request.headers.set(HttpHeaders.cookieHeader, cookieHeader);
+    request.headers.set(
+      HttpHeaders.acceptHeader,
+      'text/html,application/xhtml+xml',
+    );
+    if (referer != null) {
+      request.headers.set(HttpHeaders.refererHeader, referer);
+    }
+    final response = await request.close().timeout(_requestTimeout);
+    final body = await response
+        .transform(utf8.decoder)
+        .join()
+        .timeout(_requestTimeout);
+    if (response.statusCode != 200) {
+      final isAuth = response.statusCode == 401 || response.statusCode == 403;
+      throw _ApiHttpException(
+        response.statusCode,
+        '${response.statusCode} for $uri',
+        isAuthError: isAuth,
+      );
+    }
+    return body;
+  }
+
   Future<dynamic> _getJson(
     HttpClient client,
     Uri uri,
@@ -827,7 +1151,10 @@ class UsageApiClient {
       'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
     );
     request.headers.set(HttpHeaders.cookieHeader, cookieHeader);
-    request.headers.set(HttpHeaders.acceptHeader, 'application/json, text/plain, */*');
+    request.headers.set(
+      HttpHeaders.acceptHeader,
+      'application/json, text/plain, */*',
+    );
     request.headers.set('Sec-Fetch-Dest', 'empty');
     request.headers.set('Sec-Fetch-Mode', 'cors');
     request.headers.set('Sec-Fetch-Site', 'same-origin');
@@ -846,10 +1173,16 @@ class UsageApiClient {
     }
 
     if (bearerToken != null && bearerToken.isNotEmpty) {
-      request.headers.set(HttpHeaders.authorizationHeader, 'Bearer $bearerToken');
+      request.headers.set(
+        HttpHeaders.authorizationHeader,
+        'Bearer $bearerToken',
+      );
     }
     final response = await request.close().timeout(_requestTimeout);
-    final body = await response.transform(utf8.decoder).join().timeout(_requestTimeout);
+    final body = await response
+        .transform(utf8.decoder)
+        .join()
+        .timeout(_requestTimeout);
     if (response.statusCode != 200) {
       final isAuth = response.statusCode == 401 || response.statusCode == 403;
       throw _ApiHttpException(
@@ -902,7 +1235,10 @@ class UsageApiClient {
       final cleanToken = bearerToken.toLowerCase().startsWith('bearer ')
           ? bearerToken.substring(7).trim()
           : bearerToken.trim();
-      request.headers.set(HttpHeaders.authorizationHeader, 'Bearer $cleanToken');
+      request.headers.set(
+        HttpHeaders.authorizationHeader,
+        'Bearer $cleanToken',
+      );
     } else {
       final effectiveOrigin = origin ?? 'https://aistudio.google.com';
       final sapisidHash = _getSapisidHash(cookieHeader, effectiveOrigin);
@@ -913,7 +1249,10 @@ class UsageApiClient {
 
     request.write(jsonEncode(bodyJson));
     final response = await request.close().timeout(_requestTimeout);
-    final body = await response.transform(utf8.decoder).join().timeout(_requestTimeout);
+    final body = await response
+        .transform(utf8.decoder)
+        .join()
+        .timeout(_requestTimeout);
     if (response.statusCode != 200) {
       final isAuth = response.statusCode == 401 || response.statusCode == 403;
       throw _ApiHttpException(
@@ -939,9 +1278,12 @@ class UsageApiClient {
   }
 
   UsageSnapshot _parseCodexUsage(Map<String, dynamic> json) {
-    Map<String, dynamic>? rateLimit = json['rate_limit'] as Map<String, dynamic>?;
+    Map<String, dynamic>? rateLimit =
+        json['rate_limit'] as Map<String, dynamic>?;
 
-    if (rateLimit == null && json['rate_limits'] is List && (json['rate_limits'] as List).isNotEmpty) {
+    if (rateLimit == null &&
+        json['rate_limits'] is List &&
+        (json['rate_limits'] as List).isNotEmpty) {
       rateLimit = (json['rate_limits'] as List).first as Map<String, dynamic>?;
     }
 
@@ -954,7 +1296,10 @@ class UsageApiClient {
           rawPageText: jsonEncode(json),
         );
       }
-      return UsageSnapshot.unavailable('No rate limit data found in Codex response', rawPageText: jsonEncode(json));
+      return UsageSnapshot.unavailable(
+        'No rate limit data found in Codex response',
+        rawPageText: jsonEncode(json),
+      );
     }
 
     double? primaryPercent;
@@ -965,12 +1310,16 @@ class UsageApiClient {
     final primaryWindow = rateLimit['primary_window'] as Map<String, dynamic>?;
     if (primaryWindow != null) {
       primaryPercent = (primaryWindow['used_percent'] as num?)?.toDouble();
-      final resetAfterSec = (primaryWindow['reset_after_seconds'] as num?)?.toInt();
+      final resetAfterSec = (primaryWindow['reset_after_seconds'] as num?)
+          ?.toInt();
       final resetAtSec = (primaryWindow['reset_at'] as num?)?.toInt();
       if (resetAfterSec != null) {
         primaryReset = DateTime.now().add(Duration(seconds: resetAfterSec));
       } else if (resetAtSec != null) {
-        primaryReset = DateTime.fromMillisecondsSinceEpoch(resetAtSec * 1000, isUtc: true).toLocal();
+        primaryReset = DateTime.fromMillisecondsSinceEpoch(
+          resetAtSec * 1000,
+          isUtc: true,
+        ).toLocal();
       }
     } else if (rateLimit.containsKey('used_percent')) {
       primaryPercent = (rateLimit['used_percent'] as num?)?.toDouble();
@@ -979,24 +1328,34 @@ class UsageApiClient {
       if (resetAfterSec != null) {
         primaryReset = DateTime.now().add(Duration(seconds: resetAfterSec));
       } else if (resetAtSec != null) {
-        primaryReset = DateTime.fromMillisecondsSinceEpoch(resetAtSec * 1000, isUtc: true).toLocal();
+        primaryReset = DateTime.fromMillisecondsSinceEpoch(
+          resetAtSec * 1000,
+          isUtc: true,
+        ).toLocal();
       }
     }
 
-    final secondaryWindow = rateLimit['secondary_window'] as Map<String, dynamic>?;
+    final secondaryWindow =
+        rateLimit['secondary_window'] as Map<String, dynamic>?;
     if (secondaryWindow != null) {
       secondaryPercent = (secondaryWindow['used_percent'] as num?)?.toDouble();
-      final resetAfterSec = (secondaryWindow['reset_after_seconds'] as num?)?.toInt();
+      final resetAfterSec = (secondaryWindow['reset_after_seconds'] as num?)
+          ?.toInt();
       final resetAtSec = (secondaryWindow['reset_at'] as num?)?.toInt();
       if (resetAfterSec != null) {
         secondaryReset = DateTime.now().add(Duration(seconds: resetAfterSec));
       } else if (resetAtSec != null) {
-        secondaryReset = DateTime.fromMillisecondsSinceEpoch(resetAtSec * 1000, isUtc: true).toLocal();
+        secondaryReset = DateTime.fromMillisecondsSinceEpoch(
+          resetAtSec * 1000,
+          isUtc: true,
+        ).toLocal();
       }
     }
 
-    final limitWindowSeconds = (primaryWindow?['limit_window_seconds'] as num?)?.toInt() ?? 
-                               (rateLimit['limit_window_seconds'] as num?)?.toInt() ?? 0;
+    final limitWindowSeconds =
+        (primaryWindow?['limit_window_seconds'] as num?)?.toInt() ??
+        (rateLimit['limit_window_seconds'] as num?)?.toInt() ??
+        0;
 
     double? fiveHourPct;
     DateTime? fiveHourReset;
@@ -1025,12 +1384,14 @@ class UsageApiClient {
     );
   }
 
-  DateTime? _parseIso(String? raw) => raw == null ? null : DateTime.tryParse(raw)?.toLocal();
+  DateTime? _parseIso(String? raw) =>
+      raw == null ? null : DateTime.tryParse(raw)?.toLocal();
 
   bool _hasClaudeActivity(Map<String, dynamic> usage) {
     final fiveHour = (usage['five_hour'] as Map?)?['utilization'] as num?;
     final sevenDay = (usage['seven_day'] as Map?)?['utilization'] as num?;
-    return (fiveHour != null && fiveHour > 0) || (sevenDay != null && sevenDay > 0);
+    return (fiveHour != null && fiveHour > 0) ||
+        (sevenDay != null && sevenDay > 0);
   }
 }
 

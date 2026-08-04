@@ -31,7 +31,8 @@ class UsageScraper {
         }
       }
 
-      if (cookieHeader.trim().isEmpty && providerType != AccountProviderType.antigravity) {
+      if (cookieHeader.trim().isEmpty &&
+          providerType != AccountProviderType.antigravity) {
         cookieHeader = Platform.isAndroid
             ? await _cookieHeaderAndroid(profile, providerType: providerType)
             : await fetchCookieHeaderDesktop(
@@ -41,10 +42,17 @@ class UsageScraper {
               );
       }
 
-      if (cookieHeader.trim().isEmpty && providerType != AccountProviderType.antigravity) {
-        return UsageSnapshot.unavailable('No session cookies found -- log in first');
+      if (cookieHeader.trim().isEmpty &&
+          providerType != AccountProviderType.antigravity) {
+        return UsageSnapshot.unavailable(
+          'No session cookies found -- log in first',
+        );
       }
-      return await _apiClient.fetchUsage(cookieHeader, providerType: providerType);
+      return await _apiClient.fetchUsage(
+        cookieHeader,
+        providerType: providerType,
+        accountId: profile,
+      );
     } catch (e) {
       print('[UsageScraper] scrape failed: $e');
       return UsageSnapshot.unavailable('Unexpected scrape error: $e');

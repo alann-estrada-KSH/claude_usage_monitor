@@ -92,10 +92,13 @@ class _DashboardPageState extends State<DashboardPage> {
       // user why nothing is updating, and onReconnected above catches up
       // immediately once the connection comes back rather than waiting for
       // the next tick.
-      onTick: () => connectivity.hasConnection ? provider.refreshAll() : Future.value(),
+      onTick: () =>
+          connectivity.hasConnection ? provider.refreshAll() : Future.value(),
       interval: Duration(seconds: settings.refreshIntervalSeconds),
     )..start();
-    status.start(interval: Duration(seconds: settings.statusRefreshIntervalSeconds));
+    status.start(
+      interval: Duration(seconds: settings.statusRefreshIntervalSeconds),
+    );
     await _tray.init(
       showHideLabel: l10n.trayShowHide,
       refreshLabel: l10n.trayRefreshNow,
@@ -144,11 +147,14 @@ class _DashboardPageState extends State<DashboardPage> {
   Future<void> _addAccount() async {
     final l10n = AppLocalizations.of(context)!;
     final provider = context.read<AccountProvider>();
-    final hasAntigravity = provider.accounts.any((a) => a.providerType == AccountProviderType.antigravity);
+    final hasAntigravity = provider.accounts.any(
+      (a) => a.providerType == AccountProviderType.antigravity,
+    );
 
     final selectedProvider = await showDialog<AccountProviderType>(
       context: context,
-      builder: (context) => _ProviderSelectionDialog(hasAntigravity: hasAntigravity),
+      builder: (context) =>
+          _ProviderSelectionDialog(hasAntigravity: hasAntigravity),
     );
     if (selectedProvider == null || !mounted) return;
 
@@ -156,7 +162,9 @@ class _DashboardPageState extends State<DashboardPage> {
       if (hasAntigravity) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Ya existe una cuenta de Antigravity configurada. Solo se permite 1 cuenta local activa.'),
+            content: Text(
+              'Ya existe una cuenta de Antigravity configurada. Solo se permite 1 cuenta local activa.',
+            ),
           ),
         );
         return;
@@ -195,7 +203,11 @@ class _DashboardPageState extends State<DashboardPage> {
       if (label == null || label.trim().isEmpty || !mounted) return;
 
       final accountId = DateTime.now().microsecondsSinceEpoch.toString();
-      final account = await provider.addAccount(label.trim(), id: accountId, providerType: AccountProviderType.antigravity);
+      final account = await provider.addAccount(
+        label.trim(),
+        id: accountId,
+        providerType: AccountProviderType.antigravity,
+      );
       await provider.refreshUsage(account.id);
       return;
     }
@@ -212,12 +224,19 @@ class _DashboardPageState extends State<DashboardPage> {
     final accountId = DateTime.now().microsecondsSinceEpoch.toString();
     final loggedIn = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
-        builder: (_) => AccountLoginPage(profile: accountId, providerType: selectedProvider),
+        builder: (_) => AccountLoginPage(
+          profile: accountId,
+          providerType: selectedProvider,
+        ),
       ),
     );
     if (loggedIn != true || !mounted) return;
 
-    final account = await provider.addAccount(label.trim(), id: accountId, providerType: selectedProvider);
+    final account = await provider.addAccount(
+      label.trim(),
+      id: accountId,
+      providerType: selectedProvider,
+    );
     await provider.refreshUsage(account.id);
   }
 
@@ -231,9 +250,13 @@ class _DashboardPageState extends State<DashboardPage> {
         (_) => poller.updateInterval(Duration(seconds: interval)),
       );
     }
-    final statusInterval = context.watch<SettingsProvider>().statusRefreshIntervalSeconds;
+    final statusInterval = context
+        .watch<SettingsProvider>()
+        .statusRefreshIntervalSeconds;
     WidgetsBinding.instance.addPostFrameCallback(
-      (_) => context.read<ClaudeStatusProvider>().updateInterval(Duration(seconds: statusInterval)),
+      (_) => context.read<ClaudeStatusProvider>().updateInterval(
+        Duration(seconds: statusInterval),
+      ),
     );
 
     final colors = Theme.of(context).colorScheme;
@@ -247,49 +270,55 @@ class _DashboardPageState extends State<DashboardPage> {
                 child: ClaudeMark(size: 22, color: colors.primary),
               )
             : null,
-        title: _chromeReady ? Text(l10n.dashboardTitle, overflow: TextOverflow.ellipsis) : null,
+        title: _chromeReady
+            ? Text(l10n.dashboardTitle, overflow: TextOverflow.ellipsis)
+            : null,
         actions: !_chromeReady
             ? const []
             : [
-          IconButton(
-            icon: const Icon(Icons.fullscreen),
-            tooltip: l10n.focusModeTooltip,
-            onPressed: context.watch<AccountProvider>().accounts.isEmpty
-                ? null
-                : () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const FocusModePage()),
+                IconButton(
+                  icon: const Icon(Icons.fullscreen),
+                  tooltip: l10n.focusModeTooltip,
+                  onPressed: context.watch<AccountProvider>().accounts.isEmpty
+                      ? null
+                      : () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const FocusModePage(),
+                          ),
+                        ),
+                ),
+                const SizedBox(width: 12),
+                PopupMenuButton<_DashboardMenuAction>(
+                  icon: const Icon(Icons.more_vert),
+                  onSelected: (action) {
+                    if (action == _DashboardMenuAction.settings) {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const SettingsPage()),
+                      );
+                    } else {
+                      _addAccount();
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    PopupMenuItem(
+                      value: _DashboardMenuAction.addAccount,
+                      child: ListTile(
+                        leading: const Icon(Icons.add),
+                        title: Text(l10n.addAccountTooltip),
+                        contentPadding: EdgeInsets.zero,
+                      ),
                     ),
-          ),
-          const SizedBox(width: 12),
-          PopupMenuButton<_DashboardMenuAction>(
-            icon: const Icon(Icons.more_vert),
-            onSelected: (action) {
-              if (action == _DashboardMenuAction.settings) {
-                Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SettingsPage()));
-              } else {
-                _addAccount();
-              }
-            },
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                value: _DashboardMenuAction.addAccount,
-                child: ListTile(
-                  leading: const Icon(Icons.add),
-                  title: Text(l10n.addAccountTooltip),
-                  contentPadding: EdgeInsets.zero,
+                    PopupMenuItem(
+                      value: _DashboardMenuAction.settings,
+                      child: ListTile(
+                        leading: const Icon(Icons.settings_outlined),
+                        title: Text(l10n.settingsTooltip),
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              PopupMenuItem(
-                value: _DashboardMenuAction.settings,
-                child: ListTile(
-                  leading: const Icon(Icons.settings_outlined),
-                  title: Text(l10n.settingsTooltip),
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-            ],
-          ),
-        ],
+              ],
       ),
       body: Column(
         children: [
@@ -313,7 +342,8 @@ class _DashboardPageState extends State<DashboardPage> {
                         account: account,
                         onRefresh: () => provider.refreshUsage(account.id),
                         onRemove: () => provider.removeAccount(account.id),
-                        onRename: (label) => provider.renameAccount(account.id, label),
+                        onRename: (label) =>
+                            provider.renameAccount(account.id, label),
                       );
                     },
                   ),
@@ -353,12 +383,17 @@ class _EmptyState extends StatelessWidget {
               child: ClaudeMark(size: 40, color: colors.onPrimaryContainer),
             ),
             const SizedBox(height: 24),
-            Text(l10n.emptyStateTitle, style: Theme.of(context).textTheme.titleLarge),
+            Text(
+              l10n.emptyStateTitle,
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
             const SizedBox(height: 8),
             Text(
               l10n.emptyStateBody,
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colors.onSurfaceVariant),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: colors.onSurfaceVariant),
             ),
             const SizedBox(height: 24),
             FilledButton.icon(
@@ -394,32 +429,42 @@ class _ProviderSelectionDialog extends StatelessWidget {
             return true;
           })
           .map((type) {
-        final icon = switch (type) {
-          AccountProviderType.claude => Icons.chat_bubble_outline,
-          AccountProviderType.codex => Icons.terminal,
-          AccountProviderType.antigravity => Icons.auto_awesome,
-          AccountProviderType.copilot => Icons.code,
-        };
-        return SimpleDialogOption(
-          onPressed: () => Navigator.of(context).pop(type),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Row(
-              children: [
-                Icon(icon, size: 24),
-                const SizedBox(width: 12),
-                Text(type.displayName, style: const TextStyle(fontSize: 16)),
-              ],
-            ),
-          ),
-        );
-      }).toList(),
+            final icon = switch (type) {
+              AccountProviderType.claude => Icons.chat_bubble_outline,
+              AccountProviderType.codex => Icons.terminal,
+              AccountProviderType.antigravity => Icons.auto_awesome,
+              AccountProviderType.copilot => Icons.code,
+              AccountProviderType.openCodeGo =>
+                Icons.integration_instructions_outlined,
+            };
+            return SimpleDialogOption(
+              onPressed: () => Navigator.of(context).pop(type),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Row(
+                  children: [
+                    Icon(icon, size: 24),
+                    const SizedBox(width: 12),
+                    Text(
+                      type.displayName,
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          })
+          .toList(),
     );
   }
 }
 
 class _LabelDialog extends StatefulWidget {
-  const _LabelDialog({this.initialValue, required this.title, required this.confirmLabel});
+  const _LabelDialog({
+    this.initialValue,
+    required this.title,
+    required this.confirmLabel,
+  });
 
   final String? initialValue;
   final String title;
@@ -475,9 +520,10 @@ class _AccountCard extends StatelessWidget {
   _Severity _severity(BuildContext context) {
     final usage = account.lastKnownUsage;
     if (usage == null || !usage.isAvailable) return _Severity.unknown;
-    final worst = [usage.fiveHourPercent, usage.weeklyPercent]
-        .whereType<double>()
-        .fold<double>(0, (a, b) => a > b ? a : b);
+    final worst = [
+      usage.fiveHourPercent,
+      usage.weeklyPercent,
+    ].whereType<double>().fold<double>(0, (a, b) => a > b ? a : b);
     final settings = context.watch<SettingsProvider>();
     if (worst >= settings.criticalThresholdPercent) return _Severity.critical;
     if (worst >= settings.warningThresholdPercent) return _Severity.warning;
@@ -505,6 +551,7 @@ class _AccountCard extends StatelessWidget {
       AccountProviderType.codex => Icons.terminal,
       AccountProviderType.antigravity => Icons.auto_awesome,
       AccountProviderType.copilot => Icons.code,
+      AccountProviderType.openCodeGo => Icons.integration_instructions_outlined,
     };
 
     return Card(
@@ -522,7 +569,11 @@ class _AccountCard extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Icon(providerIcon, size: 18, color: Theme.of(context).colorScheme.primary),
+                        Icon(
+                          providerIcon,
+                          size: 18,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Row(
@@ -530,22 +581,32 @@ class _AccountCard extends StatelessWidget {
                               Flexible(
                                 child: Text(
                                   account.label,
-                                  style: Theme.of(context).textTheme.titleMedium,
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.titleMedium,
                                   overflow: TextOverflow.ellipsis,
                                   maxLines: 1,
                                 ),
                               ),
                               const SizedBox(width: 6),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: Theme.of(context).colorScheme.secondaryContainer,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.secondaryContainer,
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Text(
                                   account.providerType.displayName,
-                                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                        color: Theme.of(context).colorScheme.onSecondaryContainer,
+                                  style: Theme.of(context).textTheme.labelSmall
+                                      ?.copyWith(
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onSecondaryContainer,
                                         fontSize: 10,
                                       ),
                                 ),
@@ -576,12 +637,18 @@ class _AccountCard extends StatelessWidget {
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          Icon(Icons.lock_clock, size: 16, color: Theme.of(context).colorScheme.error),
+                          Icon(
+                            Icons.lock_clock,
+                            size: 16,
+                            color: Theme.of(context).colorScheme.error,
+                          ),
                           const SizedBox(width: 6),
                           Expanded(
                             child: Text(
                               l10n.sessionExpiredMessage,
-                              style: TextStyle(color: Theme.of(context).colorScheme.error),
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.error,
+                              ),
                             ),
                           ),
                         ],
@@ -603,9 +670,13 @@ class _AccountCard extends StatelessWidget {
                                 showDialog(
                                   context: context,
                                   builder: (ctx) => AlertDialog(
-                                    title: const Text('Detalle de API / Diagnostic'),
+                                    title: const Text(
+                                      'Detalle de API / Diagnostic',
+                                    ),
                                     content: SingleChildScrollView(
-                                      child: SelectableText(usage!.rawPageText!),
+                                      child: SelectableText(
+                                        usage!.rawPageText!,
+                                      ),
                                     ),
                                     actions: [
                                       TextButton(
@@ -620,32 +691,35 @@ class _AccountCard extends StatelessWidget {
                           ],
                         ],
                       ),
-                    ] else if (account.lastFetchError != null && usage == null) ...[
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(Icons.error_outline, size: 16, color: Theme.of(context).colorScheme.error),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              l10n.usageDataUnavailable(account.lastFetchError ?? l10n.unknownReason),
-                              style: TextStyle(color: Theme.of(context).colorScheme.error),
-                            ),
-                          ),
-                        ],
+                    ] else if (account.lastFetchError != null &&
+                        usage == null) ...[
+                      _ConnectionErrorView(
+                        account: account,
+                        errorText: account.lastFetchError ?? l10n.unknownReason,
+                        onRetry: onRefresh,
                       ),
-                    ] else if (account.lastFetchError != null && usage != null) ...[
+                    ] else if (account.lastFetchError != null &&
+                        usage != null) ...[
                       const SizedBox(height: 6),
                       Row(
                         children: [
-                          Icon(Icons.warning_amber_rounded, size: 14, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                          Icon(
+                            Icons.warning_amber_rounded,
+                            size: 14,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
+                          ),
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
                               l10n.cachedDataWarning,
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                ),
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
+                                  ),
                             ),
                           ),
                         ],
@@ -673,15 +747,76 @@ class _AccountCard extends StatelessWidget {
     );
   }
 
-  Widget _buildUsageBars(BuildContext context, AppLocalizations l10n, UsageSnapshot usage) {
+  Widget _buildUsageBars(
+    BuildContext context,
+    AppLocalizations l10n,
+    UsageSnapshot usage,
+  ) {
     final isCopilot = account.providerType == AccountProviderType.copilot;
-    final isAntigravity = account.providerType == AccountProviderType.antigravity;
+    final isAntigravity =
+        account.providerType == AccountProviderType.antigravity;
+    final isOpenCodeGo = account.providerType == AccountProviderType.openCodeGo;
+
+    if (isOpenCodeGo) {
+      final hasFiveHour =
+          usage.fiveHourPercent != null || usage.fiveHourResetAt != null;
+      final hasWeekly =
+          usage.weeklyPercent != null || usage.weeklyResetAt != null;
+      final hasMonthly =
+          usage.monthlyPercent != null || usage.monthlyResetAt != null;
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (hasFiveHour) ...[
+            UsageBar(
+              label: l10n.fiveHourWindow,
+              percent: usage.fiveHourPercent,
+              resetAt: usage.fiveHourResetAt,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Sparkline(percent: usage.fiveHourPercent),
+              ),
+            ),
+            if (hasWeekly || hasMonthly) const SizedBox(height: 14),
+          ],
+          if (hasWeekly) ...[
+            UsageBar(
+              label: l10n.weeklyWindow,
+              percent: usage.weeklyPercent,
+              resetAt: usage.weeklyResetAt,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Sparkline(percent: usage.weeklyPercent),
+              ),
+            ),
+            if (hasMonthly) const SizedBox(height: 14),
+          ],
+          if (hasMonthly)
+            UsageBar(
+              label: l10n.monthlyWindow,
+              percent: usage.monthlyPercent,
+              resetAt: usage.monthlyResetAt,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Sparkline(percent: usage.monthlyPercent),
+              ),
+            ),
+        ],
+      );
+    }
 
     if (isAntigravity) {
-      final hasGemini5h = usage.fiveHourPercent != null || usage.fiveHourResetAt != null;
-      final hasGeminiWeekly = usage.weeklyPercent != null || usage.weeklyResetAt != null;
-      final hasClaude5h = usage.claudeGptFiveHourPercent != null || usage.claudeGptFiveHourResetAt != null;
-      final hasClaudeWeekly = usage.claudeGptWeeklyPercent != null || usage.claudeGptWeeklyResetAt != null;
+      final hasGemini5h =
+          usage.fiveHourPercent != null || usage.fiveHourResetAt != null;
+      final hasGeminiWeekly =
+          usage.weeklyPercent != null || usage.weeklyResetAt != null;
+      final hasClaude5h =
+          usage.claudeGptFiveHourPercent != null ||
+          usage.claudeGptFiveHourResetAt != null;
+      final hasClaudeWeekly =
+          usage.claudeGptWeeklyPercent != null ||
+          usage.claudeGptWeeklyResetAt != null;
 
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -696,7 +831,8 @@ class _AccountCard extends StatelessWidget {
                 child: Sparkline(percent: usage.fiveHourPercent),
               ),
             ),
-            if (hasGeminiWeekly || hasClaude5h || hasClaudeWeekly) const SizedBox(height: 14),
+            if (hasGeminiWeekly || hasClaude5h || hasClaudeWeekly)
+              const SizedBox(height: 14),
           ],
           if (hasGeminiWeekly) ...[
             UsageBar(
@@ -737,9 +873,12 @@ class _AccountCard extends StatelessWidget {
       );
     }
 
-    final hasFiveHour = usage.fiveHourPercent != null || usage.fiveHourResetAt != null;
-    final hasWeekly = usage.weeklyPercent != null || usage.weeklyResetAt != null;
-    final isMonthly = usage.weeklyResetAt != null &&
+    final hasFiveHour =
+        usage.fiveHourPercent != null || usage.fiveHourResetAt != null;
+    final hasWeekly =
+        usage.weeklyPercent != null || usage.weeklyResetAt != null;
+    final isMonthly =
+        usage.weeklyResetAt != null &&
         usage.weeklyResetAt!.difference(DateTime.now()).inDays > 14;
 
     final firstLabel = isCopilot ? l10n.copilotChatWindow : l10n.fiveHourWindow;
@@ -776,15 +915,24 @@ class _AccountCard extends StatelessWidget {
     );
   }
 
-  Future<void> _confirmRemove(BuildContext context, AppLocalizations l10n) async {
+  Future<void> _confirmRemove(
+    BuildContext context,
+    AppLocalizations l10n,
+  ) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(l10n.removeAccountDialogTitle),
         content: Text(l10n.removeAccountDialogBody(account.label)),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: Text(l10n.cancel)),
-          FilledButton(onPressed: () => Navigator.of(context).pop(true), child: Text(l10n.remove)),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(l10n.remove),
+          ),
         ],
       ),
     );
@@ -810,7 +958,9 @@ class _AccountCard extends StatelessWidget {
     if (account.providerType == AccountProviderType.antigravity) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Antigravity obtiene las métricas automáticamente de la cuenta activa en el sistema (localhost/CLI).'),
+          content: Text(
+            'Antigravity obtiene las métricas automáticamente de la cuenta activa en el sistema (localhost/CLI).',
+          ),
         ),
       );
       onRefresh();
@@ -819,7 +969,10 @@ class _AccountCard extends StatelessWidget {
 
     final loggedIn = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
-        builder: (_) => AccountLoginPage(profile: account.id, providerType: account.providerType),
+        builder: (_) => AccountLoginPage(
+          profile: account.id,
+          providerType: account.providerType,
+        ),
       ),
     );
     if (loggedIn == true && context.mounted) {
@@ -828,3 +981,196 @@ class _AccountCard extends StatelessWidget {
   }
 }
 
+class _ConnectionErrorView extends StatefulWidget {
+  const _ConnectionErrorView({
+    required this.account,
+    required this.errorText,
+    required this.onRetry,
+  });
+
+  final ClaudeAccount account;
+  final String errorText;
+  final VoidCallback onRetry;
+
+  @override
+  State<_ConnectionErrorView> createState() => _ConnectionErrorViewState();
+}
+
+class _ConnectionErrorViewState extends State<_ConnectionErrorView> {
+  bool _showReasons = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final colors = Theme.of(context).colorScheme;
+
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: colors.errorContainer.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: colors.error.withValues(alpha: 0.4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.wifi_off_rounded, size: 20, color: colors.error),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  l10n.apiConnectionErrorTitle,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: colors.error,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            widget.errorText,
+            style: TextStyle(fontSize: 12, color: colors.onErrorContainer),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              InkWell(
+                onTap: () => setState(() => _showReasons = !_showReasons),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    children: [
+                      Icon(
+                        _showReasons
+                            ? Icons.keyboard_arrow_up
+                            : Icons.keyboard_arrow_down,
+                        size: 16,
+                        color: colors.primary,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        _showReasons
+                            ? l10n.hidePossibleReasons
+                            : l10n.viewPossibleReasons,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: colors.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const Spacer(),
+              TextButton.icon(
+                onPressed: widget.onRetry,
+                icon: const Icon(Icons.refresh, size: 14),
+                label: Text(
+                  l10n.retryConnection,
+                  style: const TextStyle(fontSize: 12),
+                ),
+              ),
+            ],
+          ),
+          if (_showReasons) ...[
+            const Divider(height: 12),
+            Text(
+              l10n.apiConnectionErrorReasonsTitle,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+            ),
+            const SizedBox(height: 6),
+            if (widget.account.providerType == AccountProviderType.codex) ...[
+              _ReasonItem(icon: Icons.key_off, text: l10n.codexReasonSession),
+              _ReasonItem(
+                icon: Icons.security,
+                text: l10n.codexReasonCloudflare,
+              ),
+              _ReasonItem(icon: Icons.wifi_off, text: l10n.codexReasonNetwork),
+              _ReasonItem(icon: Icons.shield, text: l10n.codexReasonFirewall),
+            ] else if (widget.account.providerType ==
+                AccountProviderType.copilot) ...[
+              _ReasonItem(icon: Icons.key_off, text: l10n.copilotReasonSession),
+              _ReasonItem(icon: Icons.lock_clock, text: l10n.copilotReason2FA),
+              _ReasonItem(
+                icon: Icons.wifi_off,
+                text: l10n.copilotReasonNetwork,
+              ),
+              _ReasonItem(icon: Icons.shield, text: l10n.copilotReasonFirewall),
+            ] else if (widget.account.providerType ==
+                AccountProviderType.antigravity) ...[
+              const _ReasonItem(
+                icon: Icons.power_settings_new,
+                text:
+                    'El CLI de Antigravity (`agy`) o la aplicación de escritorio está cerrada (si usas la cuenta local).',
+              ),
+              _ReasonItem(
+                icon: Icons.wifi_off,
+                text: l10n.apiConnectionReasonNetwork,
+              ),
+              _ReasonItem(
+                icon: Icons.key_off,
+                text: l10n.apiConnectionReasonSession,
+              ),
+              _ReasonItem(
+                icon: Icons.shield,
+                text: l10n.apiConnectionReasonFirewall,
+              ),
+            ] else ...[
+              _ReasonItem(
+                icon: Icons.key_off,
+                text: l10n.apiConnectionReasonSession,
+              ),
+              _ReasonItem(
+                icon: Icons.wifi_off,
+                text: l10n.apiConnectionReasonNetwork,
+              ),
+              _ReasonItem(
+                icon: Icons.shield,
+                text: l10n.apiConnectionReasonFirewall,
+              ),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ReasonItem extends StatelessWidget {
+  const _ReasonItem({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            icon,
+            size: 14,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              text,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(fontSize: 11),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

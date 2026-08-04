@@ -11,8 +11,18 @@ import '../../core/models/provider_type.dart';
 import '../../core/scraping/android_account_cookie_store.dart';
 import '../../core/scraping/android_cookie_jar_lock.dart';
 import '../../core/scraping/desktop_webview_lock.dart';
+import '../../core/scraping/opencode_workspace_store.dart';
 import '../../l10n/app_localizations.dart';
 
+/// Chrome-for-Android UA with the "; wv)" WebView marker stripped. Google's
+/// OAuth login blocks with `disallowed_useragent` the instant it sees that
+/// marker (a documented anti-embedded-webview policy) -- a prior version of
+/// this constant used a desktop Linux UA instead (no Android/Mobile token
+/// at all, an even stronger anomaly signal on a phone), which is what
+/// started tripping Google's `accounts.google.com/.../rejected` block for
+/// any provider's "Sign in with Google" on Android. This is the standard,
+/// widely-used mobile-UA workaround; still just a fingerprint tweak, it can
+/// stop working if Google's detection changes.
 const _androidLoginUserAgent =
     'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 '
     '(KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36';
@@ -35,6 +45,9 @@ class AccountLoginPage extends StatefulWidget {
 class _AccountLoginPageState extends State<AccountLoginPage> {
   Webview? _desktopWebview;
   static const _androidCookies = AndroidAccountCookieStore();
+  static const _openCodeWorkspaces = OpenCodeWorkspaceStore();
+  bool get _isAntigravity =>
+      widget.providerType == AccountProviderType.antigravity;
   final _manualTokenController = TextEditingController();
   final List<String> _logs = [];
 
@@ -44,7 +57,8 @@ class _AccountLoginPageState extends State<AccountLoginPage> {
   void Function()? _releaseAndroidLock;
 
   void _log(String msg) {
-    final entry = '[${DateTime.now().toIso8601String().substring(11, 19)}] $msg';
+    final entry =
+        '[${DateTime.now().toIso8601String().substring(11, 19)}] $msg';
     print(entry);
     _logs.add(entry);
   }
@@ -52,7 +66,9 @@ class _AccountLoginPageState extends State<AccountLoginPage> {
   @override
   void initState() {
     super.initState();
-    _log('Iniciando login para ${widget.providerType.displayName} (profile=${widget.profile})');
+    _log(
+      'Iniciando login para ${widget.providerType.displayName} (profile=${widget.profile})',
+    );
     _log('URL Inicial: ${widget.providerType.defaultLoginUrl}');
     if (!Platform.isAndroid) {
       _openDesktopLoginWindow();
@@ -82,8 +98,10 @@ class _AccountLoginPageState extends State<AccountLoginPage> {
       );
       webview.setOnUrlRequestCallback((url) {
         _log('Desktop webview url requested: $url');
-        if (url.contains('code=') || url.contains('localhost') || url.contains('oauth2callback')) {
-          _checkUrlForToken(WebUri(url));
+        _checkUrlForToken(WebUri(url));
+        if ((_isAntigravity && url.contains('code=')) ||
+            url.contains('localhost') ||
+            url.contains('oauth2callback')) {
           return true;
         }
         return false;
@@ -107,12 +125,42 @@ class _AccountLoginPageState extends State<AccountLoginPage> {
     final urlStr = url.toString();
     _log('URL detectada: $urlStr');
 
-    final matchCode = RegExp(r'[?&]code=([^&]+)').firstMatch(urlStr);
-    final matchToken = RegExp(r'access_token=([^&]+)').firstMatch(urlStr);
+    if (widget.providerType == AccountProviderType.openCodeGo) {
+      final workspaceMatch = RegExp(
+        r'/workspace/([a-zA-Z0-9_-]+)',
+      ).firstMatch(urlStr);
+      final profile = widget.profile;
+      if (workspaceMatch != null && profile != null) {
+        final workspaceId = workspaceMatch.group(1)!;
+        await _openCodeWorkspaces.save(profile, workspaceId);
+        _log('OpenCode Go workspace detectado y guardado: $workspaceId');
+      }
+    }
+
+    // The code=/access_token= interception below exists only for
+    // Antigravity's Google Cloud OAuth: its redirect_uri
+    // (localhost:8080/oauth2callback) is unreachable, so the code has to be
+    // grabbed straight out of the URL bar and exchanged manually with our
+    // own client_id/secret. Every other provider's OAuth (Codex's "Sign in
+    // with Google" included) is a completely different flow that
+    // legitimately has its own `code=` in its own callback URL and
+    // completes itself server-side -- intercepting it here canceled that
+    // real navigation and fed the code into Antigravity's Google token
+    // exchange with the wrong client_id, which Google correctly rejected
+    // with `unauthorized_client`. Gating on providerType keeps this
+    // Antigravity-only.
+    final matchCode = _isAntigravity
+        ? RegExp(r'[?&]code=([^&]+)').firstMatch(urlStr)
+        : null;
+    final matchToken = _isAntigravity
+        ? RegExp(r'access_token=([^&]+)').firstMatch(urlStr)
+        : null;
 
     if (matchToken != null) {
       final token = Uri.decodeComponent(matchToken.group(1)!);
-      _log('Implicit Access Token extraído de URL: ${token.substring(0, token.length > 10 ? 10 : token.length)}...');
+      _log(
+        'Implicit Access Token extraído de URL: ${token.substring(0, token.length > 10 ? 10 : token.length)}...',
+      );
       final profile = widget.profile;
       if (profile != null) {
         await _androidCookies.save(profile, 'Bearer $token');
@@ -126,20 +174,39 @@ class _AccountLoginPageState extends State<AccountLoginPage> {
       final code = Uri.decodeComponent(matchCode.group(1)!);
       if (_handledCode == code) return;
       _handledCode = code;
-      _log('Código OAuth detectado: ${code.substring(0, code.length > 10 ? 10 : code.length)}...');
+      _log(
+        'Código OAuth detectado: ${code.substring(0, code.length > 10 ? 10 : code.length)}...',
+      );
       await _exchangeCodeForToken(code);
     }
   }
 
   Future<void> _exchangeCodeForToken(String code) async {
-    _log('Iniciando intercambio de código en https://oauth2.googleapis.com/token...');
+    _log(
+      'Iniciando intercambio de código en https://oauth2.googleapis.com/token...',
+    );
     final client = HttpClient();
     try {
-      final req = await client.postUrl(Uri.parse('https://oauth2.googleapis.com/token'));
+      final req = await client.postUrl(
+        Uri.parse('https://oauth2.googleapis.com/token'),
+      );
       req.headers.set('content-type', 'application/x-www-form-urlencoded');
-      final clientId = utf8.decode(base64Decode(['NjgxMjU1ODA5Mzk1LW9vOGZ0Mm9wcm', 'RybnA5ZTNhcWY2YXYzaG1kaWIxMzVq', 'LmFwcHMuZ29vZ2xldXNlcmNvbnRlbnQuY29t'].join('')));
-      final clientSecret = utf8.decode(base64Decode(['R09DU1BYLTR1SGdN', 'UG0tMW83U2stZ2VWNkN1', 'NWNsWEZzeGw='].join('')));
-      final body = 'code=${Uri.encodeQueryComponent(code)}'
+      final clientId = utf8.decode(
+        base64Decode(
+          [
+            'NjgxMjU1ODA5Mzk1LW9vOGZ0Mm9wcm',
+            'RybnA5ZTNhcWY2YXYzaG1kaWIxMzVq',
+            'LmFwcHMuZ29vZ2xldXNlcmNvbnRlbnQuY29t',
+          ].join(''),
+        ),
+      );
+      final clientSecret = utf8.decode(
+        base64Decode(
+          ['R09DU1BYLTR1SGdN', 'UG0tMW83U2stZ2VWNkN1', 'NWNsWEZzeGw='].join(''),
+        ),
+      );
+      final body =
+          'code=${Uri.encodeQueryComponent(code)}'
           '&client_id=${Uri.encodeQueryComponent(clientId)}'
           '&client_secret=${Uri.encodeQueryComponent(clientSecret)}'
           '&redirect_uri=http://localhost:8080/oauth2callback'
@@ -185,17 +252,24 @@ class _AccountLoginPageState extends State<AccountLoginPage> {
         if (profile != null) {
           final existing = await _androidCookies.read(profile);
           _log('Token existente en storage: $existing');
-          final isOAuthToken = existing != null &&
-              (existing.startsWith('Bearer ') || existing.startsWith('ya29.') || existing.startsWith('{'));
+          final isOAuthToken =
+              existing != null &&
+              (existing.startsWith('Bearer ') ||
+                  existing.startsWith('ya29.') ||
+                  existing.startsWith('{'));
           if (!isOAuthToken) {
             final cookies = await CookieManager.instance().getCookies(
               url: WebUri(widget.providerType.cookieDomainUrl),
             );
-            final header = cookies.map((c) => '${c.name}=${c.value}').join('; ');
+            final header = cookies
+                .map((c) => '${c.name}=${c.value}')
+                .join('; ');
             _log('Guardando cookies web generales (${cookies.length} cookies)');
             if (header.isNotEmpty) await _androidCookies.save(profile, header);
           } else {
-            _log('Se conserva el OAuth token existente sin sobrescribirlo con cookies');
+            _log(
+              'Se conserva el OAuth token existente sin sobrescribirlo con cookies',
+            );
           }
         }
         if (mounted) Navigator.of(context).pop(true);
@@ -255,7 +329,9 @@ class _AccountLoginPageState extends State<AccountLoginPage> {
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: Text('${l10n.loginPageTitle} (${widget.providerType.displayName})'),
+        title: Text(
+          '${l10n.loginPageTitle} (${widget.providerType.displayName})',
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.bug_report),
@@ -272,7 +348,9 @@ class _AccountLoginPageState extends State<AccountLoginPage> {
           ),
         ],
       ),
-      body: Platform.isAndroid ? _buildAndroidWebView(l10n) : _buildDesktopHint(l10n),
+      body: Platform.isAndroid
+          ? _buildAndroidWebView(l10n)
+          : _buildDesktopHint(l10n),
     );
   }
 
@@ -295,7 +373,8 @@ class _AccountLoginPageState extends State<AccountLoginPage> {
                 maxLines: 2,
                 style: const TextStyle(fontSize: 12),
                 decoration: const InputDecoration(
-                  hintText: 'Pega aquí tu OAuth Access Token (ya29...) o JSON de oauth_creds.json',
+                  hintText:
+                      'Pega aquí tu OAuth Access Token (ya29...) o JSON de oauth_creds.json',
                   border: OutlineInputBorder(),
                   isDense: true,
                 ),
@@ -329,24 +408,35 @@ class _AccountLoginPageState extends State<AccountLoginPage> {
               _buildManualTokenSection(l10n),
             Expanded(
               child: InAppWebView(
-                initialUrlRequest: URLRequest(url: WebUri(widget.providerType.defaultLoginUrl)),
+                initialUrlRequest: URLRequest(
+                  url: WebUri(widget.providerType.defaultLoginUrl),
+                ),
                 initialSettings: InAppWebViewSettings(
                   javaScriptEnabled: true,
                   supportMultipleWindows: true,
                   javaScriptCanOpenWindowsAutomatically: true,
                   userAgent: _androidLoginUserAgent,
                   useShouldOverrideUrlLoading: true,
+                  thirdPartyCookiesEnabled: true,
+                  domStorageEnabled: true,
+                  databaseEnabled: true,
+                  requestedWithHeaderOriginAllowList: <String>{},
                 ),
                 onLoadStart: (controller, url) => _checkUrlForToken(url),
-                onUpdateVisitedHistory: (controller, url, isReload) => _checkUrlForToken(url),
-                onReceivedError: (controller, request, error) => _checkUrlForToken(request.url),
-                onReceivedHttpError: (controller, request, errorResponse) => _checkUrlForToken(request.url),
+                onUpdateVisitedHistory: (controller, url, isReload) =>
+                    _checkUrlForToken(url),
+                onReceivedError: (controller, request, error) =>
+                    _checkUrlForToken(request.url),
+                onReceivedHttpError: (controller, request, errorResponse) =>
+                    _checkUrlForToken(request.url),
                 shouldOverrideUrlLoading: (controller, navigationAction) async {
                   final url = navigationAction.request.url;
                   if (url != null) {
                     _checkUrlForToken(url);
                     final urlStr = url.toString();
-                    if (urlStr.contains('code=') || urlStr.contains('localhost') || urlStr.contains('oauth2callback')) {
+                    if ((_isAntigravity && urlStr.contains('code=')) ||
+                        urlStr.contains('localhost') ||
+                        urlStr.contains('oauth2callback')) {
                       return NavigationActionPolicy.CANCEL;
                     }
                   }
@@ -387,17 +477,26 @@ class _AccountLoginPageState extends State<AccountLoginPage> {
                   javaScriptEnabled: true,
                   userAgent: _androidLoginUserAgent,
                   useShouldOverrideUrlLoading: true,
+                  thirdPartyCookiesEnabled: true,
+                  domStorageEnabled: true,
+                  databaseEnabled: true,
+                  requestedWithHeaderOriginAllowList: <String>{},
                 ),
                 onLoadStart: (controller, url) => _checkUrlForToken(url),
-                onUpdateVisitedHistory: (controller, url, isReload) => _checkUrlForToken(url),
-                onReceivedError: (controller, request, error) => _checkUrlForToken(request.url),
-                onReceivedHttpError: (controller, request, errorResponse) => _checkUrlForToken(request.url),
+                onUpdateVisitedHistory: (controller, url, isReload) =>
+                    _checkUrlForToken(url),
+                onReceivedError: (controller, request, error) =>
+                    _checkUrlForToken(request.url),
+                onReceivedHttpError: (controller, request, errorResponse) =>
+                    _checkUrlForToken(request.url),
                 shouldOverrideUrlLoading: (controller, navigationAction) async {
                   final url = navigationAction.request.url;
                   if (url != null) {
                     _checkUrlForToken(url);
                     final urlStr = url.toString();
-                    if (urlStr.contains('code=') || urlStr.contains('localhost') || urlStr.contains('oauth2callback')) {
+                    if ((_isAntigravity && urlStr.contains('code=')) ||
+                        urlStr.contains('localhost') ||
+                        urlStr.contains('oauth2callback')) {
                       return NavigationActionPolicy.CANCEL;
                     }
                   }

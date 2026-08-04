@@ -482,4 +482,67 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get selectProviderTitle => 'Seleccionar proveedor';
+
+  @override
+  String get apiConnectionErrorTitle => 'No fue posible conectarse a la API';
+
+  @override
+  String get apiConnectionErrorReasonsTitle => 'Posibles razones de la falla:';
+
+  @override
+  String get apiConnectionReasonCliClosed =>
+      'El CLI de Antigravity o la aplicación de escritorio está cerrada.';
+
+  @override
+  String get apiConnectionReasonNetwork =>
+      'Sin conexión a internet o el servidor local/remoto no responde.';
+
+  @override
+  String get apiConnectionReasonSession =>
+      'La sesión o token OAuth caducó o no está configurado.';
+
+  @override
+  String get apiConnectionReasonFirewall =>
+      'El firewall o la red bloquea la conexión a 127.0.0.1 o a la API.';
+
+  @override
+  String get viewPossibleReasons => 'Ver posibles causas';
+
+  @override
+  String get hidePossibleReasons => 'Ocultar causas';
+
+  @override
+  String get retryConnection => 'Reintentar conexión';
+
+  @override
+  String get copilotReasonSession =>
+      'Sesión de GitHub expirada o sin suscripción activa a GitHub Copilot.';
+
+  @override
+  String get copilotReason2FA =>
+      'Autenticación de 2 factores (2FA) o verificación de dispositivo requerida por GitHub.';
+
+  @override
+  String get copilotReasonNetwork =>
+      'Sin conexión a internet o la API de GitHub (api.github.com) no responde.';
+
+  @override
+  String get copilotReasonFirewall =>
+      'Red, proxy o VPN bloqueando las conexiones a GitHub.';
+
+  @override
+  String get codexReasonSession =>
+      'Sesión de ChatGPT/OpenAI no iniciada o expirada.';
+
+  @override
+  String get codexReasonCloudflare =>
+      'Verificación de seguridad de Cloudflare o Arkose requiere volver a iniciar sesión.';
+
+  @override
+  String get codexReasonNetwork =>
+      'Sin conexión a internet o los servidores de ChatGPT no responden.';
+
+  @override
+  String get codexReasonFirewall =>
+      'Red o VPN bloqueando el acceso a chatgpt.com.';
 }

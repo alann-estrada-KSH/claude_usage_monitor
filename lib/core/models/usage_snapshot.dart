@@ -7,6 +7,8 @@ class UsageSnapshot {
     this.fiveHourResetAt,
     this.weeklyPercent,
     this.weeklyResetAt,
+    this.monthlyPercent,
+    this.monthlyResetAt,
     this.claudeGptFiveHourPercent,
     this.claudeGptFiveHourResetAt,
     this.claudeGptWeeklyPercent,
@@ -22,6 +24,11 @@ class UsageSnapshot {
   final DateTime? fiveHourResetAt;
   final double? weeklyPercent;
   final DateTime? weeklyResetAt;
+
+  /// Third usage window some providers report alongside 5h/weekly (e.g.
+  /// OpenCode Go's 30-day quota). Null for providers with only two windows.
+  final double? monthlyPercent;
+  final DateTime? monthlyResetAt;
 
   final double? claudeGptFiveHourPercent;
   final DateTime? claudeGptFiveHourResetAt;
@@ -64,6 +71,8 @@ class UsageSnapshot {
     DateTime? fiveHourResetAt,
     double? weeklyPercent,
     DateTime? weeklyResetAt,
+    double? monthlyPercent,
+    DateTime? monthlyResetAt,
     double? claudeGptFiveHourPercent,
     DateTime? claudeGptFiveHourResetAt,
     double? claudeGptWeeklyPercent,
@@ -78,10 +87,16 @@ class UsageSnapshot {
       fiveHourResetAt: fiveHourResetAt ?? this.fiveHourResetAt,
       weeklyPercent: weeklyPercent ?? this.weeklyPercent,
       weeklyResetAt: weeklyResetAt ?? this.weeklyResetAt,
-      claudeGptFiveHourPercent: claudeGptFiveHourPercent ?? this.claudeGptFiveHourPercent,
-      claudeGptFiveHourResetAt: claudeGptFiveHourResetAt ?? this.claudeGptFiveHourResetAt,
-      claudeGptWeeklyPercent: claudeGptWeeklyPercent ?? this.claudeGptWeeklyPercent,
-      claudeGptWeeklyResetAt: claudeGptWeeklyResetAt ?? this.claudeGptWeeklyResetAt,
+      monthlyPercent: monthlyPercent ?? this.monthlyPercent,
+      monthlyResetAt: monthlyResetAt ?? this.monthlyResetAt,
+      claudeGptFiveHourPercent:
+          claudeGptFiveHourPercent ?? this.claudeGptFiveHourPercent,
+      claudeGptFiveHourResetAt:
+          claudeGptFiveHourResetAt ?? this.claudeGptFiveHourResetAt,
+      claudeGptWeeklyPercent:
+          claudeGptWeeklyPercent ?? this.claudeGptWeeklyPercent,
+      claudeGptWeeklyResetAt:
+          claudeGptWeeklyResetAt ?? this.claudeGptWeeklyResetAt,
       isAvailable: isAvailable ?? this.isAvailable,
       parseError: parseError ?? this.parseError,
       sessionExpired: sessionExpired ?? this.sessionExpired,
@@ -89,19 +104,21 @@ class UsageSnapshot {
   }
 
   Map<String, dynamic> toJson() => {
-        'fetchedAt': fetchedAt.toIso8601String(),
-        'fiveHourPercent': fiveHourPercent,
-        'fiveHourResetAt': fiveHourResetAt?.toIso8601String(),
-        'weeklyPercent': weeklyPercent,
-        'weeklyResetAt': weeklyResetAt?.toIso8601String(),
-        'claudeGptFiveHourPercent': claudeGptFiveHourPercent,
-        'claudeGptFiveHourResetAt': claudeGptFiveHourResetAt?.toIso8601String(),
-        'claudeGptWeeklyPercent': claudeGptWeeklyPercent,
-        'claudeGptWeeklyResetAt': claudeGptWeeklyResetAt?.toIso8601String(),
-        'isAvailable': isAvailable,
-        'parseError': parseError,
-        'sessionExpired': sessionExpired,
-      };
+    'fetchedAt': fetchedAt.toIso8601String(),
+    'fiveHourPercent': fiveHourPercent,
+    'fiveHourResetAt': fiveHourResetAt?.toIso8601String(),
+    'weeklyPercent': weeklyPercent,
+    'weeklyResetAt': weeklyResetAt?.toIso8601String(),
+    'monthlyPercent': monthlyPercent,
+    'monthlyResetAt': monthlyResetAt?.toIso8601String(),
+    'claudeGptFiveHourPercent': claudeGptFiveHourPercent,
+    'claudeGptFiveHourResetAt': claudeGptFiveHourResetAt?.toIso8601String(),
+    'claudeGptWeeklyPercent': claudeGptWeeklyPercent,
+    'claudeGptWeeklyResetAt': claudeGptWeeklyResetAt?.toIso8601String(),
+    'isAvailable': isAvailable,
+    'parseError': parseError,
+    'sessionExpired': sessionExpired,
+  };
 
   factory UsageSnapshot.fromJson(Map<String, dynamic> json) {
     return UsageSnapshot(
@@ -114,11 +131,17 @@ class UsageSnapshot {
       weeklyResetAt: json['weeklyResetAt'] != null
           ? DateTime.parse(json['weeklyResetAt'] as String)
           : null,
-      claudeGptFiveHourPercent: (json['claudeGptFiveHourPercent'] as num?)?.toDouble(),
+      monthlyPercent: (json['monthlyPercent'] as num?)?.toDouble(),
+      monthlyResetAt: json['monthlyResetAt'] != null
+          ? DateTime.parse(json['monthlyResetAt'] as String)
+          : null,
+      claudeGptFiveHourPercent: (json['claudeGptFiveHourPercent'] as num?)
+          ?.toDouble(),
       claudeGptFiveHourResetAt: json['claudeGptFiveHourResetAt'] != null
           ? DateTime.parse(json['claudeGptFiveHourResetAt'] as String)
           : null,
-      claudeGptWeeklyPercent: (json['claudeGptWeeklyPercent'] as num?)?.toDouble(),
+      claudeGptWeeklyPercent: (json['claudeGptWeeklyPercent'] as num?)
+          ?.toDouble(),
       claudeGptWeeklyResetAt: json['claudeGptWeeklyResetAt'] != null
           ? DateTime.parse(json['claudeGptWeeklyResetAt'] as String)
           : null,
