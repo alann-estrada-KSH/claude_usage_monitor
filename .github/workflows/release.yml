@@ -1,11 +1,23 @@
 name: Release
 
-# Tag push (v1.2.3) builds Linux + Windows, publishes both to a GitHub
-# Release, and republishes the apt repo (Linux) to GitHub Pages so
-# `apt update && apt upgrade` picks up the new version. See
+# Tag push (v1.2.3) builds Linux + Windows + Android, publishes the first
+# two to a GitHub Release, republishes the apt repo (Linux) to GitHub Pages
+# so `apt update && apt upgrade` picks up the new version, and uploads the
+# Android build straight to the Play Store's internal track. See
 # packaging/linux/build_deb.sh and packaging/windows/installer.iss for the
 # actual packaging steps this just wires together, and the README for the
 # apt install line end users run once.
+#
+# build-android needs three repo secrets (see android/key.properties and
+# ~/keystores/ locally for what these mirror -- never committed):
+#   ANDROID_KEYSTORE_BASE64  -- `base64 -w0` of the upload keystore .jks
+#   ANDROID_KEY_PROPERTIES   -- raw contents of android/key.properties
+#                                (storeFile line gets overwritten at build
+#                                time to the path the runner decodes to,
+#                                since the local one is this machine only)
+#   PLAY_STORE_JSON_KEY      -- JSON key of a service account linked in
+#                                Play Console (Settings > API access) with
+#                                Release manager permission on this app
 on:
   push:
     tags:
@@ -127,3 +139,40 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: ClaudeUsageMonitorSetup.exe
+
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+
+      - name: Decode Android signing secrets
+        run: |
+          set -euo pipefail
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > "$GITHUB_WORKSPACE/upload-keystore.jks"
+          echo "${{ secrets.ANDROID_KEY_PROPERTIES }}" > android/key.properties
+          # The committed key.properties' storeFile points at this developer's
+          # machine (~/keystores/...) -- doesn't exist on the runner, so it's
+          # rewritten to wherever the line above just decoded the keystore to.
+          sed -i "s|^storeFile=.*|storeFile=$GITHUB_WORKSPACE/upload-keystore.jks|" android/key.properties
+
+      - run: flutter pub get
+      - run: flutter build appbundle --release
+
+      - name: Upload to Play Store (internal track)
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_JSON_KEY }}
+          packageName: com.claudeusagemonitor.claude_usage_monitor
+          releaseFiles: build/app/outputs/bundle/release/app-release.aab
+          track: internal
+          status: completed
