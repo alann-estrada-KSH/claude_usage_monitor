@@ -65,8 +65,14 @@ just grab the `.deb` from Releases instead.
 and run it, or use Settings > Updates inside the app once installed --
 it checks GitHub Releases, downloads, and runs the installer for you.
 
-**Android:** available on Google Play. You can also build and
-`flutter install` it yourself, or sideload the debug/release APK.
+**Android:** available on Google Play (internal testing track for now). Want
+in? [Open an issue](https://github.com/alann-estrada-KSH/claude_usage_monitor/issues/new?title=Add+me+as+an+Android+internal+tester)
+with the Google account email you want added as a tester -- Play Console
+only shows the app to emails explicitly added to that track. Also looking
+for a few internal testers in general to shake out bugs before a wider
+release, so feel free to open one just to volunteer even without a specific
+issue in mind. You can also build and `flutter install` it yourself, or
+sideload the debug/release APK, without waiting on any of that.
 
 ### Vendored patches: `desktop_webview_window` on Linux
 
