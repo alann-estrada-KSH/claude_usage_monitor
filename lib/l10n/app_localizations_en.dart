@@ -9,7 +9,7 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
-  String get appTitle => 'Claude Usage Monitor';
+  String get appTitle => 'Usage Monitor';
 
   @override
   String get dashboardTitle => 'Usage Monitor';
@@ -273,6 +273,152 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get timeFormat24h => '24h';
+
+  @override
+  String get floatingWindowSection => 'Floating window';
+
+  @override
+  String get floatingWindowToggle => 'Keep dashboard above other windows';
+
+  @override
+  String get floatingWindowDescription =>
+      'Linux and Windows: keep usage percentages visible while you work.';
+
+  @override
+  String get localApiSection => 'Local API';
+
+  @override
+  String get localApiToggle => 'Enable local API';
+
+  @override
+  String get localApiDescription =>
+      'Read-only API on this computer. Disabled by default; it only exposes normalized usage data and never exposes session cookies.';
+
+  @override
+  String get localApiPortLabel => 'Preferred port';
+
+  @override
+  String get localApiRateLimitLabel => 'Requests per minute';
+
+  @override
+  String get localApiSave => 'Save API settings';
+
+  @override
+  String localApiRunning(int port) {
+    return 'Running at http://127.0.0.1:$port';
+  }
+
+  @override
+  String get localApiStopped => 'API is stopped';
+
+  @override
+  String get localApiDetails => 'Integration details';
+
+  @override
+  String get localApiDetailsTitle => 'Local API integration';
+
+  @override
+  String get localApiSecretLabel => 'Secret key';
+
+  @override
+  String get localApiAuth =>
+      'Use the key as: Authorization: Bearer YOUR_SECRET_KEY';
+
+  @override
+  String get localApiEndpoints =>
+      'GET /v1/health\nGET /v1/accounts\nGET /v1/usage\nGET /v1/accounts/account_id/usage';
+
+  @override
+  String get localApiAccountsLabel => 'Account IDs';
+
+  @override
+  String get localApiNoAccounts => 'No accounts available.';
+
+  @override
+  String get localApiCopy => 'Copy';
+
+  @override
+  String get localApiRegenerate => 'Regenerate key';
+
+  @override
+  String get localApiRegenerateWarning =>
+      'Existing integrations will stop working until they use the new key.';
+
+  @override
+  String get localApiStartError =>
+      'The local API could not start. Check the port and system credentials.';
+
+  @override
+  String get localApiInvalidSettings => 'Enter a valid port and request limit.';
+
+  @override
+  String get pinnedNotificationSection => 'Persistent notification';
+
+  @override
+  String get pinnedNotificationAllAccounts => 'Show all accounts';
+
+  @override
+  String get pinnedNotificationDescription =>
+      'Android only. Unselect all accounts to hide this notification.';
+
+  @override
+  String get pinnedNotificationAccounts => 'Accounts shown in the notification';
+
+  @override
+  String get pinnedNotificationNoAccounts => 'No accounts available.';
+
+  @override
+  String get widgetSection => 'Android widgets';
+
+  @override
+  String get widgetAllAccounts => 'Show all accounts in widgets';
+
+  @override
+  String get widgetDescription =>
+      'Choose which accounts appear in Android widgets. Unselect all to hide account data.';
+
+  @override
+  String get widgetAccounts => 'Accounts shown in widgets';
+
+  @override
+  String get widgetNoAccounts => 'No accounts available.';
+
+  @override
+  String get enterFloatingMode => 'Enter floating mode';
+
+  @override
+  String get exitFloatingMode => 'Exit floating mode';
+
+  @override
+  String get floatingModeTitle => 'Usage monitor';
+
+  @override
+  String get floatingModeDescription =>
+      'This window stays above other windows.';
+
+  @override
+  String get floatingOpacity => 'Window opacity';
+
+  @override
+  String get antigravityGeminiFiveHour => 'Gemini (5 hours)';
+
+  @override
+  String get antigravityGeminiWeekly => 'Gemini (weekly)';
+
+  @override
+  String get antigravityClaudeGptFiveHour => 'Claude / GPT (5 hours)';
+
+  @override
+  String get antigravityClaudeGptWeekly => 'Claude / GPT (weekly)';
+
+  @override
+  String get floatingAccounts => 'Floating mode accounts';
+
+  @override
+  String get floatingAllAccounts => 'Show all accounts';
+
+  @override
+  String get floatingNoAccounts => 'No accounts selected.';
 
   @override
   String get focusModeAccountsSection => 'Accounts shown in focus mode';

@@ -1,8 +1,4 @@
-import 'dart:io' show Platform;
-
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/models/app_settings.dart';
 import '../../core/models/claude_account.dart';
@@ -14,6 +10,7 @@ import '../../core/scraping/usage_scraper.dart';
 import '../../core/storage/account_store.dart';
 import '../../core/storage/app_settings_store.dart';
 import '../../core/storage/usage_history_store.dart';
+import '../../core/widgets/android_widget_bridge.dart';
 
 class AccountProvider extends ChangeNotifier {
   AccountProvider({
@@ -23,12 +20,12 @@ class AccountProvider extends ChangeNotifier {
     UsageHistoryStore? history,
     AndroidAccountCookieStore? androidCookies,
     AppSettingsStore? settingsStore,
-  })  : _store = store ?? AccountStore(),
-        _scraper = scraper ?? UsageScraper(),
-        _alerts = alerts ?? UsageAlertService(),
-        _history = history ?? UsageHistoryStore(),
-        _androidCookies = androidCookies ?? const AndroidAccountCookieStore(),
-        _settingsStore = settingsStore ?? AppSettingsStore();
+  }) : _store = store ?? AccountStore(),
+       _scraper = scraper ?? UsageScraper(),
+       _alerts = alerts ?? UsageAlertService(),
+       _history = history ?? UsageHistoryStore(),
+       _androidCookies = androidCookies ?? const AndroidAccountCookieStore(),
+       _settingsStore = settingsStore ?? AppSettingsStore();
 
   final AccountStore _store;
   final UsageScraper _scraper;
@@ -48,13 +45,21 @@ class AccountProvider extends ChangeNotifier {
     await _alerts.init();
     await _history.init();
     await _settingsStore.init();
-    _accounts = _store.getAll()..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    _accounts = _store.getAll()
+      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    // Persist only the new API metadata. The existing id remains untouched;
+    // it is also the desktop WebView profile and Android cookie namespace.
+    for (final account in _accounts) {
+      await _store.save(account);
+    }
+    await _publishNative();
     notifyListeners();
   }
 
   AppSettings _loadSettings() => _settingsStore.load();
 
-  List<UsageHistoryPoint> historyFor(String accountId) => _history.forAccount(accountId);
+  List<UsageHistoryPoint> historyFor(String accountId) =>
+      _history.forAccount(accountId);
 
   /// [id], when passed, must match whatever profile the login webview used
   /// (see AccountLoginPage) -- the id has to exist *before* login so both
@@ -66,6 +71,7 @@ class AccountProvider extends ChangeNotifier {
   }) async {
     final account = ClaudeAccount(
       id: id ?? DateTime.now().microsecondsSinceEpoch.toString(),
+      apiAccountId: generateApiAccountId(),
       label: label,
       providerType: providerType,
       isLoggedIn: true,
@@ -73,10 +79,14 @@ class AccountProvider extends ChangeNotifier {
       // new accounts otherwise jump to the front of the list/focus view on
       // every reorder-sensitive screen, ahead of ones the user deliberately
       // placed first.
-      sortOrder: _accounts.isEmpty ? 0 : _accounts.map((a) => a.sortOrder).reduce((a, b) => a > b ? a : b) + 1,
+      sortOrder: _accounts.isEmpty
+          ? 0
+          : _accounts.map((a) => a.sortOrder).reduce((a, b) => a > b ? a : b) +
+                1,
     );
     _accounts = [..._accounts, account];
     await _store.save(account);
+    await _publishNative();
     notifyListeners();
     return account;
   }
@@ -90,7 +100,8 @@ class AccountProvider extends ChangeNotifier {
     final moved = reordered.removeAt(oldIndex);
     reordered.insert(newIndex, moved);
     _accounts = [
-      for (var i = 0; i < reordered.length; i++) reordered[i].copyWith(sortOrder: i),
+      for (var i = 0; i < reordered.length; i++)
+        reordered[i].copyWith(sortOrder: i),
     ];
     notifyListeners();
     for (final account in _accounts) {
@@ -101,14 +112,18 @@ class AccountProvider extends ChangeNotifier {
   Future<void> removeAccount(String accountId) async {
     _accounts = _accounts.where((a) => a.id != accountId).toList();
     await _store.delete(accountId);
-    await _androidCookies.delete(accountId); // no-op if nothing was ever stored (desktop, or Android fallback path)
+    await _androidCookies.delete(
+      accountId,
+    ); // no-op if nothing was ever stored (desktop, or Android fallback path)
     await _ensureSomeAccountVisibleInFocusMode();
+    await _publishNative();
     notifyListeners();
   }
 
   Future<void> renameAccount(String accountId, String newLabel) async {
     _updateAccount(accountId, (a) => a.copyWith(label: newLabel));
     await _persist(accountId);
+    await _publishNative();
     notifyListeners();
   }
 
@@ -140,8 +155,6 @@ class AccountProvider extends ChangeNotifier {
     await _persist(first.id);
   }
 
-  static const _widgetChannel = MethodChannel('claude_usage_monitor/widget');
-
   Future<void> refreshAll() async {
     if (_isRefreshing || _accounts.isEmpty) return;
     _isRefreshing = true;
@@ -150,35 +163,9 @@ class AccountProvider extends ChangeNotifier {
       for (final account in _accounts) {
         await refreshUsage(account.id);
       }
-      if (Platform.isAndroid) await _updateAndroidWidgets();
     } finally {
       _isRefreshing = false;
       notifyListeners();
-    }
-  }
-
-  /// Writes account data to SharedPreferences so the Android home-screen
-  /// widget and Quick Tile can read it without an active Flutter isolate, then
-  /// sends a MethodChannel ping so MainActivity can push an immediate widget
-  /// update while the app is in the foreground.
-  Future<void> _updateAndroidWidgets() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setInt('usage_widget_count', _accounts.length);
-      for (var i = 0; i < _accounts.length; i++) {
-        final a = _accounts[i];
-        final u = a.lastKnownUsage;
-        await prefs.setString('usage_widget_${i}_label', a.label);
-        await prefs.setDouble('usage_widget_${i}_five_hour', u?.fiveHourPercent ?? -1.0);
-        await prefs.setDouble('usage_widget_${i}_weekly', u?.weeklyPercent ?? -1.0);
-        await prefs.setBool('usage_widget_${i}_has_error',
-            a.lastFetchError != null && u == null);
-        await prefs.setBool('usage_widget_${i}_session_expired', a.lastFetchSessionExpired);
-      }
-      await prefs.setString('usage_widget_updated_at', DateTime.now().toIso8601String());
-      await _widgetChannel.invokeMethod('updateWidgets');
-    } catch (_) {
-      // Widget update failure must never surface to the user.
     }
   }
 
@@ -239,10 +226,14 @@ class AccountProvider extends ChangeNotifier {
       );
       await _persist(accountId);
     }
+    await _publishNative();
     notifyListeners();
   }
 
-  void _updateAccount(String accountId, ClaudeAccount Function(ClaudeAccount) update) {
+  void _updateAccount(
+    String accountId,
+    ClaudeAccount Function(ClaudeAccount) update,
+  ) {
     _accounts = _accounts
         .map((a) => a.id == accountId ? update(a) : a)
         .toList();
@@ -255,5 +246,16 @@ class AccountProvider extends ChangeNotifier {
         return;
       }
     }
+  }
+
+  Future<void> _publishNative() async {
+    final settings = _loadSettings();
+    await AndroidWidgetBridge.publish(
+      _accounts,
+      persistentNotificationAllAccounts: settings.pinnedNotificationAllAccounts,
+      persistentNotificationAccountIds: settings.pinnedNotificationAccountIds,
+      widgetAllAccounts: settings.widgetAllAccounts,
+      widgetAccountIds: settings.widgetAccountIds,
+    );
   }
 }

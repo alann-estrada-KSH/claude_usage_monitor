@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
+import 'package:window_manager/window_manager.dart';
 
 import 'app_theme.dart';
 import 'core/background/session_keepalive.dart';
@@ -23,6 +24,9 @@ Future<void> main() async {
   // entirely (it crashed on close inside Flutter's own precompiled engine),
   // so that entrypoint path no longer exists and main() takes no arguments.
   WidgetsFlutterBinding.ensureInitialized();
+  if (Platform.isLinux || Platform.isWindows) {
+    await windowManager.ensureInitialized();
+  }
   await Hive.initFlutter();
   // flutter_inappwebview only has a platform implementation on Android here
   // (Linux/Windows use desktop_webview_window instead -- see README).
@@ -49,11 +53,19 @@ class ClaudeUsageMonitorApp extends StatelessWidget {
       child: Consumer<SettingsProvider>(
         builder: (context, settings, _) {
           return MaterialApp(
-            title: 'Claude Usage Monitor',
-            theme: AppTheme.light(accentColor: settings.accentColor, fontChoice: settings.fontChoice),
-            darkTheme: AppTheme.dark(accentColor: settings.accentColor, fontChoice: settings.fontChoice),
+            title: 'Usage Monitor',
+            theme: AppTheme.light(
+              accentColor: settings.accentColor,
+              fontChoice: settings.fontChoice,
+            ),
+            darkTheme: AppTheme.dark(
+              accentColor: settings.accentColor,
+              fontChoice: settings.fontChoice,
+            ),
             themeMode: settings.themeMode,
-            locale: settings.languageCode != null ? Locale(settings.languageCode!) : null,
+            locale: settings.languageCode != null
+                ? Locale(settings.languageCode!)
+                : null,
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: const DashboardPage(),

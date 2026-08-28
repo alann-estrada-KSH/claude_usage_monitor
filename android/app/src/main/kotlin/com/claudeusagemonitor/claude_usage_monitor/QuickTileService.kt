@@ -7,44 +7,39 @@ import android.service.quicksettings.TileService
 
 @TargetApi(Build.VERSION_CODES.N)
 class QuickTileService : TileService() {
-
     override fun onStartListening() {
         super.onStartListening()
         refresh()
     }
 
     private fun refresh() {
-        val prefs = applicationContext.getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
-        val count = prefs.getInt("flutter.usage_widget_count", 0)
+        val account = UsageWidgetProvider.readAccounts(applicationContext).firstOrNull()
         val tile = qsTile ?: return
-
-        if (count == 0) {
-            tile.label = "Usage Monitor"
+        if (account == null) {
+            tile.label = getString(R.string.app_name)
+            tile.contentDescription = getString(R.string.widget_no_accounts)
             tile.state = Tile.STATE_INACTIVE
         } else {
-            val label = prefs.getString("flutter.usage_widget_0_label", "Claude") ?: "Claude"
-            val fiveHour = prefs.getFloat("flutter.usage_widget_0_five_hour", -1f)
-            val weekly = prefs.getFloat("flutter.usage_widget_0_weekly", -1f)
-            val hasError = prefs.getBoolean("flutter.usage_widget_0_has_error", false)
-            val expired = prefs.getBoolean("flutter.usage_widget_0_session_expired", false)
-
-            tile.label = label
+            tile.label = account.label
             when {
-                hasError -> {
-                    tile.contentDescription = "Error fetching data"
+                account.hasError -> {
+                    tile.contentDescription = getString(R.string.widget_error)
                     tile.state = Tile.STATE_UNAVAILABLE
                 }
-                expired -> {
-                    tile.contentDescription = "Session expired"
+                account.sessionExpired -> {
+                    tile.contentDescription = getString(R.string.widget_session_expired)
                     tile.state = Tile.STATE_UNAVAILABLE
                 }
-                fiveHour < 0 -> {
-                    tile.contentDescription = "No data yet"
+                account.fiveHour < 0f -> {
+                    tile.contentDescription = getString(R.string.widget_no_data)
                     tile.state = Tile.STATE_INACTIVE
                 }
                 else -> {
-                    tile.contentDescription =
-                        "Session ${fiveHour.toInt()}%  ·  Weekly ${weekly.toInt()}%"
+                    tile.contentDescription = getString(
+                        R.string.widget_usage_format,
+                        account.fiveHour.toInt(),
+                        account.weekly.toInt(),
+                    )
                     tile.state = Tile.STATE_ACTIVE
                 }
             }

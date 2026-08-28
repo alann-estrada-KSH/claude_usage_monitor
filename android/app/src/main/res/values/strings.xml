@@ -1,4 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Claude Usage Monitor</string>
+    <string name="app_name">Usage Monitor</string>
+    <string name="widget_choose_account">Choose account</string>
+    <string name="widget_save">Save</string>
+    <string name="widget_no_accounts">No accounts configured</string>
+    <string name="widget_overview_description">Usage limits for selected accounts</string>
+    <string name="widget_header">USAGE MONITOR</string>
+    <string name="widget_overview_subtitle">Selected accounts</string>
+    <string name="widget_session_label">Session · 5h</string>
+    <string name="widget_weekly_label">Weekly · 7d</string>
+    <string name="widget_percent">%1$d%%</string>
+    <string name="widget_five_compact">5h %1$d%%</string>
+    <string name="widget_weekly_compact">7d %1$d%%</string>
+    <string name="widget_session_pending">--</string>
+    <string name="widget_weekly_pending">--</string>
+    <string name="widget_error">Unable to fetch usage</string>
+    <string name="widget_session_expired">Session expired</string>
+    <string name="widget_relogin">Open app to log in</string>
+    <string name="widget_no_data">No data</string>
+    <string name="widget_usage_format">5h %1$d%% · 7d %2$d%%</string>
 </resources>

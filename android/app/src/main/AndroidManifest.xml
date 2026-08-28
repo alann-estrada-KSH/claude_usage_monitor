@@ -27,7 +27,7 @@
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
     <uses-permission android:name="android.permission.VIBRATE"/>
     <application
-        android:label="Claude Usage Monitor"
+        android:label="@string/app_name"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
@@ -69,6 +69,21 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/usage_widget_info"/>
         </receiver>
+        <receiver
+            android:name=".UsageOverviewWidgetProvider"
+            android:exported="true"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/usage_overview_widget_info"/>
+        </receiver>
+        <activity
+            android:name=".WidgetConfigurationActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.Material.Light.Dialog" />
 
         <!-- Quick Settings tile: long-press tile panel in notification shade -->
         <service

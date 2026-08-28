@@ -15,6 +15,7 @@ class AppTrayController with TrayListener, WindowListener {
 
   final Future<void> Function() onRefreshNow;
   bool _initialized = false;
+  bool _keepFloatingOnTop = false;
 
   List<String> _usageLines = const [];
   List<String>? _lastRebuiltLines;
@@ -37,6 +38,11 @@ class AppTrayController with TrayListener, WindowListener {
   static const _quitKey = 'quit';
 
   bool get isSupported => !Platform.isAndroid;
+
+  void setFloatingMode(bool enabled) {
+    _keepFloatingOnTop = enabled;
+    if (enabled) windowManager.setAlwaysOnTop(true);
+  }
 
   Future<void> init({
     required String showHideLabel,
@@ -97,15 +103,18 @@ class AppTrayController with TrayListener, WindowListener {
     _lastRebuiltLines = _usageLines;
     try {
       await trayManager.setContextMenu(
-        Menu(items: [
-          for (final line in _usageLines) MenuItem(label: line, disabled: true),
-          if (_usageLines.isNotEmpty) MenuItem.separator(),
-          _showHideItem!,
-          MenuItem.separator(),
-          _refreshItem!,
-          MenuItem.separator(),
-          _quitItem!,
-        ]),
+        Menu(
+          items: [
+            for (final line in _usageLines)
+              MenuItem(label: line, disabled: true),
+            if (_usageLines.isNotEmpty) MenuItem.separator(),
+            _showHideItem!,
+            MenuItem.separator(),
+            _refreshItem!,
+            MenuItem.separator(),
+            _quitItem!,
+          ],
+        ),
       );
     } catch (e) {
       print('[AppTrayController] menu rebuild failed: $e');
@@ -155,5 +164,10 @@ class AppTrayController with TrayListener, WindowListener {
     if (await windowManager.isPreventClose()) {
       await windowManager.hide();
     }
+  }
+
+  @override
+  void onWindowBlur() {
+    if (_keepFloatingOnTop) windowManager.setAlwaysOnTop(true);
   }
 }

@@ -9,6 +9,7 @@ import '../scraping/usage_scraper.dart';
 import '../storage/account_store.dart';
 import '../storage/app_settings_store.dart';
 import '../storage/notification_log_store.dart';
+import '../widgets/android_widget_bridge.dart';
 
 const _uniqueName = 'claude_usage_monitor.session_keepalive';
 const _taskName = 'session_keepalive';
@@ -59,22 +60,35 @@ void sessionKeepAliveCallbackDispatcher() {
               criticalThreshold: settings.criticalThresholdPercent,
             );
           } else if (snapshot.sessionExpired) {
-            await accountStore.save(account.copyWith(
-              lastFetchedAt: DateTime.now(),
-              clearLastFetchError: true,
-              lastFetchSessionExpired: true,
-            ));
+            await accountStore.save(
+              account.copyWith(
+                lastFetchedAt: DateTime.now(),
+                clearLastFetchError: true,
+                lastFetchSessionExpired: true,
+              ),
+            );
           } else {
-            await accountStore.save(account.copyWith(
-              lastFetchedAt: DateTime.now(),
-              lastFetchError: snapshot.parseError ?? 'Unknown error',
-              lastFetchSessionExpired: false,
-            ));
+            await accountStore.save(
+              account.copyWith(
+                lastFetchedAt: DateTime.now(),
+                lastFetchError: snapshot.parseError ?? 'Unknown error',
+                lastFetchSessionExpired: false,
+              ),
+            );
           }
         } catch (_) {
           // Per-account failure must not stop other accounts or crash WorkManager.
         }
       }
+      await AndroidWidgetBridge.publish(
+        accountStore.getAll(),
+        notifyNative: false,
+        persistentNotificationAllAccounts:
+            settings.pinnedNotificationAllAccounts,
+        persistentNotificationAccountIds: settings.pinnedNotificationAccountIds,
+        widgetAllAccounts: settings.widgetAllAccounts,
+        widgetAccountIds: settings.widgetAccountIds,
+      );
     } catch (_) {
       // Top-level guard: WorkManager retries on unhandled exceptions, which
       // would storm the API if init itself is broken -- eat it instead.

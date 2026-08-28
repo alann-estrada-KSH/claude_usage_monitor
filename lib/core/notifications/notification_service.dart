@@ -1,15 +1,20 @@
 import 'dart:async';
 import 'dart:io' show Platform;
+import 'dart:ui' show PlatformDispatcher;
 
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
+
+import '../models/claude_account.dart';
 
 /// Thin wrapper around flutter_local_notifications. Android + Linux only --
 /// those are the two platforms this app is actually tested on (see README).
 class NotificationService {
   NotificationService._();
   static final NotificationService instance = NotificationService._();
+
+  static const _persistentUsageId = 0x434c4155;
 
   final _plugin = FlutterLocalNotificationsPlugin();
   bool _initialized = false;
@@ -29,6 +34,16 @@ class NotificationService {
 
   bool get _supported => Platform.isAndroid || Platform.isLinux;
 
+  static List<ClaudeAccount> selectPersistentAccounts(
+    List<ClaudeAccount> accounts, {
+    required bool allAccounts,
+    required List<String> accountIds,
+  }) {
+    if (allAccounts) return accounts;
+    final selected = accountIds.toSet();
+    return accounts.where((account) => selected.contains(account.id)).toList();
+  }
+
   /// Lightweight init for the WorkManager background isolate -- skips
   /// permission requests (they require a UI) and only registers the plugin.
   Future<void> initBackground() async {
@@ -38,7 +53,9 @@ class NotificationService {
       await _plugin.initialize(
         const InitializationSettings(
           android: AndroidInitializationSettings('@mipmap/ic_launcher'),
-          linux: LinuxInitializationSettings(defaultActionName: 'Open Claude Usage Monitor'),
+          linux: LinuxInitializationSettings(
+            defaultActionName: 'Open Usage Monitor',
+          ),
         ),
       );
       _initialized = true;
@@ -54,7 +71,9 @@ class NotificationService {
       await _plugin.initialize(
         const InitializationSettings(
           android: AndroidInitializationSettings('@mipmap/ic_launcher'),
-          linux: LinuxInitializationSettings(defaultActionName: 'Open Claude Usage Monitor'),
+          linux: LinuxInitializationSettings(
+            defaultActionName: 'Open Usage Monitor',
+          ),
         ),
       );
       _initialized = true;
@@ -64,8 +83,10 @@ class NotificationService {
         // -- easy to miss since older Android versions never needed it,
         // which is exactly the kind of thing that silently breaks
         // notifications on a newer test device without any error.
-        final androidPlugin = _plugin.resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
+        final androidPlugin = _plugin
+            .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin
+            >();
         await androidPlugin?.requestNotificationsPermission();
         // Without this, scheduled notifications fall back to *inexact*
         // delivery, which Doze/OEM battery management (confirmed on a
@@ -88,8 +109,10 @@ class NotificationService {
   Future<bool?> areNotificationsEnabled() async {
     if (!_initialized || !Platform.isAndroid) return null;
     try {
-      final androidPlugin = _plugin.resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>();
+      final androidPlugin = _plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
       return await androidPlugin?.areNotificationsEnabled();
     } catch (e) {
       print('[NotificationService] areNotificationsEnabled failed: $e');
@@ -101,7 +124,64 @@ class NotificationService {
     final previous = _queue;
     final completer = Completer<void>();
     _queue = completer.future;
-    return previous.then((_) => _showThrottled(title, body)).whenComplete(completer.complete);
+    return previous
+        .then((_) => _showThrottled(title, body))
+        .whenComplete(completer.complete);
+  }
+
+  /// Keeps a quiet, non-dismissible Android status notification with the last
+  /// known usage. It is intentionally separate from alert notifications.
+  Future<void> updatePersistentUsage(
+    List<ClaudeAccount> accounts, {
+    bool allAccounts = true,
+    List<String> accountIds = const [],
+  }) async {
+    if (!_initialized || !Platform.isAndroid) return;
+    final selected = selectPersistentAccounts(
+      accounts,
+      allAccounts: allAccounts,
+      accountIds: accountIds,
+    );
+    if (selected.isEmpty) {
+      await cancel(_persistentUsageId);
+      return;
+    }
+    final lang = PlatformDispatcher.instance.locale.languageCode == 'es'
+        ? 'es'
+        : 'en';
+    final lines = selected
+        .map((account) {
+          final usage = account.lastKnownUsage;
+          final five = usage?.fiveHourPercent?.toStringAsFixed(0) ?? '--';
+          final weekly = usage?.weeklyPercent?.toStringAsFixed(0) ?? '--';
+          return lang == 'es'
+              ? '${account.label}: sesión $five% · semanal $weekly%'
+              : '${account.label}: session $five% · weekly $weekly%';
+        })
+        .join('\n');
+    try {
+      await _plugin.show(
+        _persistentUsageId,
+        lang == 'es' ? 'Monitor de uso' : 'Usage Monitor',
+        lines,
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'usage_status',
+            'Usage status',
+            channelDescription: 'Current usage',
+            importance: Importance.low,
+            priority: Priority.low,
+            ongoing: true,
+            autoCancel: false,
+            onlyAlertOnce: true,
+            showWhen: false,
+            category: AndroidNotificationCategory.status,
+          ),
+        ),
+      );
+    } catch (e) {
+      print('[NotificationService] persistent usage update failed: $e');
+    }
   }
 
   Future<void> _showThrottled(String title, String body) async {
@@ -145,6 +225,15 @@ class NotificationService {
     }
   }
 
+  Future<void> cancel(int id) async {
+    if (!_initialized) return;
+    try {
+      await _plugin.cancel(id);
+    } catch (e) {
+      print('[NotificationService] cancel($id) failed: $e');
+    }
+  }
+
   /// Schedules a notification to fire at [when] (absolute local time).
   /// Android only -- desktop never had schedulable background alerts.
   Future<void> scheduleAt({
@@ -157,14 +246,22 @@ class NotificationService {
     if (!when.isAfter(DateTime.now())) return;
     try {
       var scheduleMode = AndroidScheduleMode.inexactAllowWhileIdle;
-      final androidPlugin = _plugin.resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>();
-      final canExact = await androidPlugin?.canScheduleExactNotifications() ?? false;
+      final androidPlugin = _plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
+      final canExact =
+          await androidPlugin?.canScheduleExactNotifications() ?? false;
       if (canExact) scheduleMode = AndroidScheduleMode.exactAllowWhileIdle;
 
       final utc = when.toUtc();
       final tzWhen = tz.TZDateTime.utc(
-        utc.year, utc.month, utc.day, utc.hour, utc.minute, utc.second,
+        utc.year,
+        utc.month,
+        utc.day,
+        utc.hour,
+        utc.minute,
+        utc.second,
       );
       await _plugin.zonedSchedule(
         id,
@@ -207,9 +304,12 @@ class NotificationService {
     try {
       var scheduleMode = AndroidScheduleMode.inexactAllowWhileIdle;
       if (Platform.isAndroid) {
-        final androidPlugin = _plugin.resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
-        final canExact = await androidPlugin?.canScheduleExactNotifications() ?? false;
+        final androidPlugin = _plugin
+            .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin
+            >();
+        final canExact =
+            await androidPlugin?.canScheduleExactNotifications() ?? false;
         if (canExact) scheduleMode = AndroidScheduleMode.exactAllowWhileIdle;
       }
       await _plugin.zonedSchedule(
@@ -228,7 +328,8 @@ class NotificationService {
           linux: LinuxNotificationDetails(),
         ),
         androidScheduleMode: scheduleMode,
-        uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
       );
     } catch (e) {
       print('[NotificationService] scheduleTest failed: $e');

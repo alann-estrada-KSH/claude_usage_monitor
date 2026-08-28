@@ -38,10 +38,11 @@ class UsageBar extends StatelessWidget {
     // headlineSmall, not displaySmall -- focus mode's percentages (the only
     // `large` caller) read as oversized/cartoonish at display scale on a
     // phone screen; still clearly the focal number, just not screen-filling.
-    final percentStyle = (large
-            ? Theme.of(context).textTheme.headlineSmall
-            : Theme.of(context).textTheme.bodyMedium)
-        ?.copyWith(fontWeight: FontWeight.w700);
+    final percentStyle =
+        (large
+                ? Theme.of(context).textTheme.headlineSmall
+                : Theme.of(context).textTheme.bodyMedium)
+            ?.copyWith(fontWeight: FontWeight.w700);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -49,48 +50,63 @@ class UsageBar extends StatelessWidget {
         Row(
           children: [
             Expanded(
-              child: Text(label, style: labelStyle, overflow: TextOverflow.ellipsis, maxLines: 1),
+              child: Text(
+                label,
+                style: labelStyle,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
             ),
-            Text(percent != null ? '${percent!.toStringAsFixed(0)}%' : '--', style: percentStyle),
+            Text(
+              percent != null ? '${percent!.toStringAsFixed(0)}%' : '--',
+              style: percentStyle,
+            ),
           ],
         ),
         ?child,
         if (resetAt != null) ...[
           const SizedBox(height: 4),
           Text(
-            l10n.resetsApprox(_relativeTime(context, l10n, resetAt!)),
+            l10n.resetsApprox(formatRelativeReset(context, l10n, resetAt!)),
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ] else if (percent != null && percent! < 0.01) ...[
           const SizedBox(height: 4),
           Text(
             l10n.startCounting,
-            style: Theme.of(context)
-                .textTheme
-                .bodySmall
-                ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
         ],
       ],
     );
   }
+}
 
-  String _relativeTime(BuildContext context, AppLocalizations l10n, DateTime target) {
-    final diff = target.difference(DateTime.now());
-    if (diff.isNegative) return l10n.resetNow;
-
-    final relative = diff.inDays >= 1
-        ? l10n.resetInDays(diff.inDays)
-        : diff.inHours >= 1
-            ? l10n.resetInHoursMinutes(diff.inHours, diff.inMinutes % 60)
-            : l10n.resetInMinutes(diff.inMinutes);
-
-    // Beyond a couple of hours, "in 6d" alone is hard to place on a
-    // calendar -- pair it with the actual date/time it resolves to.
-    if (diff.inHours < 2) return relative;
-    final absolute = formatAbsoluteDateTime(context, l10n, target);
-    return '$relative ($absolute)';
+String formatRelativeReset(
+  BuildContext context,
+  AppLocalizations l10n,
+  DateTime target,
+) {
+  final diff = target.difference(DateTime.now());
+  if (diff.isNegative) {
+    return l10n.resetNow;
   }
+
+  final relative = diff.inDays >= 1
+      ? l10n.resetInDays(diff.inDays)
+      : diff.inHours >= 1
+      ? l10n.resetInHoursMinutes(diff.inHours, diff.inMinutes % 60)
+      : l10n.resetInMinutes(diff.inMinutes);
+
+  // Beyond a couple of hours, "in 6d" alone is hard to place on a
+  // calendar -- pair it with the actual date/time it resolves to.
+  if (diff.inHours < 2) {
+    return relative;
+  }
+  final absolute = formatAbsoluteDateTime(context, l10n, target);
+  return '$relative ($absolute)';
 }
 
 /// Color for a percent value against the user's configured warning/critical
@@ -100,20 +116,33 @@ class UsageBar extends StatelessWidget {
 Color severityColor(BuildContext context, double percent) {
   final settings = context.watch<SettingsProvider>();
   final colors = Theme.of(context).colorScheme;
-  if (percent >= settings.criticalThresholdPercent) return colors.error;
-  if (percent >= settings.warningThresholdPercent) return const Color(0xFFCC9900);
+  if (percent >= settings.criticalThresholdPercent) {
+    return colors.error;
+  }
+  if (percent >= settings.warningThresholdPercent) {
+    return const Color(0xFFCC9900);
+  }
   return colors.primary;
 }
 
 /// "Today, 4:38pm" / "Tomorrow, 4:38pm" / "11 Jul, 4:38pm" -- and, for a
 /// date in a different year, "11 Jul 2027, 4:38pm". Honors the 12h/24h
 /// choice from Settings.
-String formatAbsoluteDateTime(BuildContext context, AppLocalizations l10n, DateTime target) {
+String formatAbsoluteDateTime(
+  BuildContext context,
+  AppLocalizations l10n,
+  DateTime target,
+) {
   final now = DateTime.now();
-  final isToday = target.year == now.year && target.month == now.month && target.day == now.day;
+  final isToday =
+      target.year == now.year &&
+      target.month == now.month &&
+      target.day == now.day;
   final tomorrow = now.add(const Duration(days: 1));
   final isTomorrow =
-      target.year == tomorrow.year && target.month == tomorrow.month && target.day == tomorrow.day;
+      target.year == tomorrow.year &&
+      target.month == tomorrow.month &&
+      target.day == tomorrow.day;
 
   final locale = Localizations.localeOf(context).toString();
   final use24h = context.watch<SettingsProvider>().use24HourFormat;

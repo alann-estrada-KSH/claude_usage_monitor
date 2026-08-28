@@ -9,7 +9,7 @@ class AppLocalizationsEs extends AppLocalizations {
   AppLocalizationsEs([String locale = 'es']) : super(locale);
 
   @override
-  String get appTitle => 'Monitor de Uso de Claude';
+  String get appTitle => 'Monitor de Uso';
 
   @override
   String get dashboardTitle => 'Monitor de Uso';
@@ -273,6 +273,154 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get timeFormat24h => '24h';
+
+  @override
+  String get floatingWindowSection => 'Ventana flotante';
+
+  @override
+  String get floatingWindowToggle => 'Mantener el panel sobre otras ventanas';
+
+  @override
+  String get floatingWindowDescription =>
+      'Linux y Windows: deja visibles los porcentajes mientras trabajas.';
+
+  @override
+  String get localApiSection => 'API local';
+
+  @override
+  String get localApiToggle => 'Activar API local';
+
+  @override
+  String get localApiDescription =>
+      'API de solo lectura en este equipo. Está desactivada por defecto; solo expone datos normalizados de uso y nunca cookies de sesión.';
+
+  @override
+  String get localApiPortLabel => 'Puerto preferido';
+
+  @override
+  String get localApiRateLimitLabel => 'Solicitudes por minuto';
+
+  @override
+  String get localApiSave => 'Guardar configuración de API';
+
+  @override
+  String localApiRunning(int port) {
+    return 'Activa en http://127.0.0.1:$port';
+  }
+
+  @override
+  String get localApiStopped => 'API detenida';
+
+  @override
+  String get localApiDetails => 'Detalles de integración';
+
+  @override
+  String get localApiDetailsTitle => 'Integración con API local';
+
+  @override
+  String get localApiSecretLabel => 'Secret key';
+
+  @override
+  String get localApiAuth =>
+      'Usa la llave así: Authorization: Bearer TU_SECRET_KEY';
+
+  @override
+  String get localApiEndpoints =>
+      'GET /v1/health\nGET /v1/accounts\nGET /v1/usage\nGET /v1/accounts/account_id/usage';
+
+  @override
+  String get localApiAccountsLabel => 'IDs de cuenta';
+
+  @override
+  String get localApiNoAccounts => 'No hay cuentas disponibles.';
+
+  @override
+  String get localApiCopy => 'Copiar';
+
+  @override
+  String get localApiRegenerate => 'Regenerar llave';
+
+  @override
+  String get localApiRegenerateWarning =>
+      'Las integraciones existentes dejarán de funcionar hasta usar la nueva llave.';
+
+  @override
+  String get localApiStartError =>
+      'No fue posible iniciar la API local. Revisa el puerto y las credenciales del sistema.';
+
+  @override
+  String get localApiInvalidSettings =>
+      'Introduce un puerto y un límite de solicitudes válidos.';
+
+  @override
+  String get pinnedNotificationSection => 'Notificación fijada';
+
+  @override
+  String get pinnedNotificationAllAccounts => 'Mostrar todas las cuentas';
+
+  @override
+  String get pinnedNotificationDescription =>
+      'Solo Android. Desmarca todas las cuentas para ocultar esta notificación.';
+
+  @override
+  String get pinnedNotificationAccounts =>
+      'Cuentas mostradas en la notificación';
+
+  @override
+  String get pinnedNotificationNoAccounts => 'No hay cuentas disponibles.';
+
+  @override
+  String get widgetSection => 'Widgets de Android';
+
+  @override
+  String get widgetAllAccounts => 'Mostrar todas las cuentas en los widgets';
+
+  @override
+  String get widgetDescription =>
+      'Elige qué cuentas aparecen en los widgets de Android. Desmarca todas para ocultar los datos.';
+
+  @override
+  String get widgetAccounts => 'Cuentas mostradas en los widgets';
+
+  @override
+  String get widgetNoAccounts => 'No hay cuentas disponibles.';
+
+  @override
+  String get enterFloatingMode => 'Entrar en modo flotante';
+
+  @override
+  String get exitFloatingMode => 'Salir del modo flotante';
+
+  @override
+  String get floatingModeTitle => 'Monitor de uso';
+
+  @override
+  String get floatingModeDescription =>
+      'Esta ventana permanecerá sobre las demás ventanas.';
+
+  @override
+  String get floatingOpacity => 'Opacidad de la ventana';
+
+  @override
+  String get antigravityGeminiFiveHour => 'Gemini (5 horas)';
+
+  @override
+  String get antigravityGeminiWeekly => 'Gemini (semanal)';
+
+  @override
+  String get antigravityClaudeGptFiveHour => 'Claude / GPT (5 horas)';
+
+  @override
+  String get antigravityClaudeGptWeekly => 'Claude / GPT (semanal)';
+
+  @override
+  String get floatingAccounts => 'Cuentas del modo flotante';
+
+  @override
+  String get floatingAllAccounts => 'Mostrar todas las cuentas';
+
+  @override
+  String get floatingNoAccounts => 'No hay cuentas seleccionadas.';
 
   @override
   String get focusModeAccountsSection => 'Cuentas visibles en modo enfoque';

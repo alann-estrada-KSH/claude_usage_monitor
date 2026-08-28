@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
-    android:minWidth="160dp"
-    android:minHeight="80dp"
-    android:targetCellWidth="2"
-    android:targetCellHeight="1"
+    android:minWidth="90dp"
+    android:minHeight="128dp"
+    android:targetCellWidth="1"
+    android:targetCellHeight="2"
+    android:resizeMode="horizontal|vertical"
     android:updatePeriodMillis="1800000"
     android:initialLayout="@layout/usage_widget"
     android:widgetCategory="home_screen"
+    android:configure="com.claudeusagemonitor.claude_usage_monitor.WidgetConfigurationActivity"
     android:description="@string/app_name"
     android:previewLayout="@layout/usage_widget"/>

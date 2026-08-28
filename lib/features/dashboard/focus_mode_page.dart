@@ -9,6 +9,7 @@ import '../../core/models/claude_account.dart';
 import '../../core/models/provider_type.dart';
 import '../../l10n/app_localizations.dart';
 import '../accounts/account_provider.dart';
+import '../settings/settings_provider.dart';
 import 'claude_mark.dart';
 import 'live_updated_ago.dart';
 import 'sparkline.dart';
@@ -49,8 +50,11 @@ class _FocusModePageState extends State<FocusModePage> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final accounts =
-        context.watch<AccountProvider>().accounts.where((a) => a.showInFocusMode).toList();
+    final accounts = context
+        .watch<AccountProvider>()
+        .accounts
+        .where((a) => a.showInFocusMode)
+        .toList();
 
     return PopScope(
       canPop: true,
@@ -102,13 +106,15 @@ class _FocusModeBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(builder: (context, constraints) {
-      final useGrid =
-          constraints.maxWidth >= _tabletBreakpoint && accounts.length > 1;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final useGrid =
+            constraints.maxWidth >= _tabletBreakpoint && accounts.length > 1;
 
-      if (useGrid) return _buildGrid(context, constraints);
-      return _buildSingleColumn(context);
-    });
+        if (useGrid) return _buildGrid(context, constraints);
+        return _buildSingleColumn(context);
+      },
+    );
   }
 
   Widget _buildGrid(BuildContext context, BoxConstraints constraints) {
@@ -205,22 +211,36 @@ class _FocusAccountBlock extends StatelessWidget {
     if (sessionExpired) {
       body = _errorRow(context, colors, l10n.sessionExpiredMessage);
     } else if (hasError && usage == null) {
-      body = _errorRow(context, colors,
-          l10n.usageDataUnavailable(account.lastFetchError ?? l10n.unknownReason));
+      final debugMode = context.watch<SettingsProvider>().debugMode;
+      body = _errorRow(
+        context,
+        colors,
+        debugMode
+            ? l10n.usageDataUnavailable(
+                account.lastFetchError ?? l10n.unknownReason,
+              )
+            : l10n.apiConnectionErrorTitle,
+      );
     } else {
       final isCopilot = account.providerType == AccountProviderType.copilot;
-      final isAntigravity = account.providerType == AccountProviderType.antigravity;
-      final hasFiveHour = usage?.fiveHourPercent != null || usage?.fiveHourResetAt != null;
-      final hasWeekly = usage?.weeklyPercent != null || usage?.weeklyResetAt != null;
-      final isMonthly = usage?.weeklyResetAt != null &&
+      final isAntigravity =
+          account.providerType == AccountProviderType.antigravity;
+      final hasFiveHour =
+          usage?.fiveHourPercent != null || usage?.fiveHourResetAt != null;
+      final hasWeekly =
+          usage?.weeklyPercent != null || usage?.weeklyResetAt != null;
+      final isMonthly =
+          usage?.weeklyResetAt != null &&
           usage!.weeklyResetAt!.difference(DateTime.now()).inDays > 14;
 
-      final firstLabel = isCopilot ? l10n.copilotChatWindow : l10n.fiveHourWindow;
+      final firstLabel = isCopilot
+          ? l10n.copilotChatWindow
+          : l10n.fiveHourWindow;
       final secondLabel = isCopilot
           ? l10n.copilotCompletionsWindow
           : (isAntigravity
-              ? 'Cuota de modelos Antigravity'
-              : (isMonthly ? l10n.monthlyWindow : l10n.weeklyWindow));
+                ? 'Cuota de modelos Antigravity'
+                : (isMonthly ? l10n.monthlyWindow : l10n.weeklyWindow));
 
       body = Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -263,7 +283,9 @@ class _FocusAccountBlock extends StatelessWidget {
             textAlign: TextAlign.center,
             overflow: TextOverflow.ellipsis,
             maxLines: 1,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(color: colors.onSurfaceVariant),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(color: colors.onSurfaceVariant),
           ),
           const SizedBox(height: 20),
           body,
@@ -285,10 +307,9 @@ class _FocusAccountBlock extends StatelessWidget {
         Expanded(
           child: Text(
             message,
-            style: Theme.of(context)
-                .textTheme
-                .bodyMedium
-                ?.copyWith(color: colors.error),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: colors.error),
           ),
         ),
       ],

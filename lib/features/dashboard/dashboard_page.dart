@@ -3,8 +3,11 @@ import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:quick_actions/quick_actions.dart';
+import 'package:window_manager/window_manager.dart';
 
 import '../../core/connectivity/connectivity_provider.dart';
+import '../../core/local_api/local_api_service.dart';
+import '../../core/models/app_settings.dart';
 import '../../core/models/claude_account.dart';
 import '../../core/models/provider_type.dart';
 import '../../core/models/usage_snapshot.dart';
@@ -48,6 +51,9 @@ class _DashboardPageState extends State<DashboardPage> {
   // for that first frame only, then swap in the real chrome once layout has
   // had a chance to settle against the window's actual size.
   bool _chromeReady = false;
+  bool _floatingMode = false;
+  Size? _sizeBeforeFloating;
+  bool? _alwaysOnTopBeforeFloating;
 
   @override
   void initState() {
@@ -84,6 +90,17 @@ class _DashboardPageState extends State<DashboardPage> {
     }
 
     await provider.init();
+    await settings.init();
+    if (settings.floatingModeEnabled) {
+      await windowManager.setAsFrameless();
+      await _resizeForFloatingMode();
+      if (mounted) setState(() => _floatingMode = true);
+    }
+    LocalApiService.instance.configure(
+      accounts: () => provider.accounts,
+      settings: () => settings.settings,
+    );
+    await LocalApiService.instance.apply();
     if (connectivity.hasConnection) await provider.refreshAll();
     if (!mounted) return;
     _poller = UsagePoller(
@@ -105,6 +122,7 @@ class _DashboardPageState extends State<DashboardPage> {
       quitLabel: l10n.trayQuit,
       tooltip: l10n.appTitle,
     );
+    if (settings.floatingModeEnabled) _tray.setFloatingMode(true);
     _trayTooltipProvider = provider;
     provider.addListener(_updateTrayTooltip);
     _updateTrayTooltip();
@@ -240,6 +258,82 @@ class _DashboardPageState extends State<DashboardPage> {
     await provider.refreshUsage(account.id);
   }
 
+  Future<void> _enterFloatingMode() async {
+    if (!Platform.isLinux && !Platform.isWindows) return;
+    final settings = context.read<SettingsProvider>();
+    _sizeBeforeFloating ??= await windowManager.getSize();
+    _alwaysOnTopBeforeFloating ??= await windowManager.isAlwaysOnTop();
+    await settings.setFloatingModeEnabled(true);
+    _tray.setFloatingMode(true);
+    await windowManager.setAsFrameless();
+    await _resizeForFloatingMode();
+    await windowManager.show();
+    await windowManager.focus();
+    await windowManager.setAlwaysOnTop(true);
+    if (mounted) setState(() => _floatingMode = true);
+  }
+
+  Future<void> _exitFloatingMode() async {
+    if (!_floatingMode) return;
+    final settings = context.read<SettingsProvider>();
+    await settings.setFloatingModeEnabled(false);
+    _tray.setFloatingMode(false);
+    await windowManager.setTitleBarStyle(TitleBarStyle.normal);
+    await windowManager.setMinimumSize(const Size(-1, -1));
+    await windowManager.setAlwaysOnTop(
+      settings.floatingWindowEnabled || (_alwaysOnTopBeforeFloating ?? false),
+    );
+    final previousSize = _sizeBeforeFloating;
+    if (previousSize != null) {
+      await windowManager.setSize(previousSize, animate: true);
+    }
+    if (mounted) {
+      setState(() {
+        _floatingMode = false;
+        _sizeBeforeFloating = null;
+        _alwaysOnTopBeforeFloating = null;
+      });
+    }
+  }
+
+  Future<void> _resizeForFloatingMode() async {
+    await windowManager.setAlwaysOnTop(true);
+    await windowManager.setMinimumSize(const Size(280, 220));
+    await windowManager.setSize(const Size(390, 330), animate: true);
+    await windowManager.center();
+  }
+
+  Future<void> _configureFloatingAccounts() async {
+    final settings = context.read<SettingsProvider>();
+    final accounts = context.read<AccountProvider>().accounts;
+    if (accounts.isEmpty) return;
+    final selection = await showDialog<_FloatingAccountSelection>(
+      context: context,
+      builder: (_) => _FloatingAccountsDialog(
+        allAccounts: settings.floatingAllAccounts,
+        accountIds: settings.floatingAccountIds,
+        accounts: accounts,
+      ),
+    );
+    if (selection == null || !mounted) return;
+    await settings.setFloatingAccounts(
+      allAccounts: selection.allAccounts,
+      accountIds: selection.accountIds,
+    );
+  }
+
+  Future<void> _configureFloatingOpacity() async {
+    final settings = context.read<SettingsProvider>();
+    final value = await showDialog<double>(
+      context: context,
+      builder: (_) =>
+          _FloatingOpacityDialog(initialValue: settings.floatingWindowOpacity),
+    );
+    if (value != null && mounted) {
+      await settings.setFloatingWindowOpacity(value);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -261,6 +355,15 @@ class _DashboardPageState extends State<DashboardPage> {
 
     final colors = Theme.of(context).colorScheme;
 
+    if (_floatingMode) {
+      return _FloatingDashboard(
+        onExit: _exitFloatingMode,
+        onConfigureAccounts: _configureFloatingAccounts,
+        onConfigureOpacity: _configureFloatingOpacity,
+        onRefresh: context.read<AccountProvider>().refreshAll,
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         leadingWidth: _chromeReady ? 48 : 0,
@@ -276,6 +379,14 @@ class _DashboardPageState extends State<DashboardPage> {
         actions: !_chromeReady
             ? const []
             : [
+                if (Platform.isLinux || Platform.isWindows) ...[
+                  IconButton(
+                    onPressed: _enterFloatingMode,
+                    icon: const Icon(Icons.picture_in_picture_alt_outlined),
+                    tooltip: l10n.enterFloatingMode,
+                  ),
+                  const SizedBox(width: 8),
+                ],
                 IconButton(
                   icon: const Icon(Icons.fullscreen),
                   tooltip: l10n.focusModeTooltip,
@@ -404,6 +515,454 @@ class _EmptyState extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _FloatingDashboard extends StatelessWidget {
+  const _FloatingDashboard({
+    required this.onExit,
+    required this.onConfigureAccounts,
+    required this.onConfigureOpacity,
+    required this.onRefresh,
+  });
+
+  final VoidCallback onExit;
+  final VoidCallback onConfigureAccounts;
+  final VoidCallback onConfigureOpacity;
+  final Future<void> Function() onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Scaffold(
+      body: DragToResizeArea(
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+            child: Column(
+              children: [
+                DragToMoveArea(
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Tooltip(
+                          message: l10n.floatingModeDescription,
+                          child: Text(
+                            l10n.floatingModeTitle,
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        onPressed: onConfigureAccounts,
+                        tooltip: l10n.floatingAccounts,
+                        icon: const Icon(Icons.manage_accounts_outlined),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        onPressed: onConfigureOpacity,
+                        tooltip: l10n.floatingOpacity,
+                        icon: const Icon(Icons.opacity_outlined),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        onPressed: onRefresh,
+                        tooltip: l10n.refreshNowTooltip,
+                        icon: const Icon(Icons.refresh),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: Consumer2<AccountProvider, SettingsProvider>(
+                    builder: (context, provider, settings, _) {
+                      final accounts = settings.floatingAllAccounts
+                          ? provider.accounts
+                          : provider.accounts
+                                .where(
+                                  (account) => settings.floatingAccountIds
+                                      .contains(account.id),
+                                )
+                                .toList();
+                      if (accounts.isEmpty) {
+                        return Center(child: Text(l10n.floatingNoAccounts));
+                      }
+                      return ListView.separated(
+                        itemCount: accounts.length,
+                        separatorBuilder: (_, _) => const SizedBox(height: 8),
+                        itemBuilder: (context, index) =>
+                            _FloatingAccountCard(account: accounts[index]),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: onExit,
+                    icon: const Icon(Icons.picture_in_picture_alt_outlined),
+                    label: Text(l10n.exitFloatingMode),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FloatingAccountCard extends StatelessWidget {
+  const _FloatingAccountCard({required this.account});
+
+  final ClaudeAccount account;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final usage = account.lastKnownUsage;
+    final providerIcon = switch (account.providerType) {
+      AccountProviderType.claude => Icons.chat_bubble_outline,
+      AccountProviderType.codex => Icons.terminal,
+      AccountProviderType.antigravity => Icons.auto_awesome,
+      AccountProviderType.copilot => Icons.code,
+      AccountProviderType.openCodeGo => Icons.integration_instructions_outlined,
+    };
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(providerIcon, size: 16),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) => Wrap(
+                      spacing: 6,
+                      runSpacing: 2,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxWidth: constraints.maxWidth * 0.62,
+                          ),
+                          child: Text(
+                            account.label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                        DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.secondaryContainer,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            child: Text(
+                              account.providerType.displayName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.labelSmall
+                                  ?.copyWith(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSecondaryContainer,
+                                  ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            ..._floatingMetrics(
+              l10n,
+              account.providerType,
+              usage,
+            ).asMap().entries.expand(
+              (entry) => [
+                if (entry.key > 0) const SizedBox(height: 6),
+                _FloatingUsageLine(
+                  label: entry.value.label,
+                  percent: entry.value.percent,
+                  resetAt: entry.value.resetAt,
+                ),
+              ],
+            ),
+            if (account.lastFetchSessionExpired)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  l10n.sessionExpiredMessage,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.error,
+                    fontSize: 11,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FloatingMetric {
+  const _FloatingMetric(this.label, this.percent, this.resetAt);
+
+  final String label;
+  final double? percent;
+  final DateTime? resetAt;
+}
+
+List<_FloatingMetric> _floatingMetrics(
+  AppLocalizations l10n,
+  AccountProviderType providerType,
+  UsageSnapshot? usage,
+) {
+  if (usage == null) {
+    return [
+      _FloatingMetric(l10n.fiveHourWindow, null, null),
+      _FloatingMetric(l10n.weeklyWindow, null, null),
+    ];
+  }
+
+  if (providerType == AccountProviderType.antigravity) {
+    return [
+      _FloatingMetric(
+        l10n.antigravityGeminiFiveHour,
+        usage.fiveHourPercent,
+        usage.fiveHourResetAt,
+      ),
+      _FloatingMetric(
+        l10n.antigravityGeminiWeekly,
+        usage.weeklyPercent,
+        usage.weeklyResetAt,
+      ),
+      _FloatingMetric(
+        l10n.antigravityClaudeGptFiveHour,
+        usage.claudeGptFiveHourPercent,
+        usage.claudeGptFiveHourResetAt,
+      ),
+      _FloatingMetric(
+        l10n.antigravityClaudeGptWeekly,
+        usage.claudeGptWeeklyPercent,
+        usage.claudeGptWeeklyResetAt,
+      ),
+    ];
+  }
+
+  final firstLabel = providerType == AccountProviderType.copilot
+      ? l10n.copilotChatWindow
+      : l10n.fiveHourWindow;
+  final secondLabel = providerType == AccountProviderType.copilot
+      ? l10n.copilotCompletionsWindow
+      : (usage.weeklyResetAt != null &&
+                usage.weeklyResetAt!.difference(DateTime.now()).inDays > 14
+            ? l10n.monthlyWindow
+            : l10n.weeklyWindow);
+  final metrics = [
+    _FloatingMetric(firstLabel, usage.fiveHourPercent, usage.fiveHourResetAt),
+    _FloatingMetric(secondLabel, usage.weeklyPercent, usage.weeklyResetAt),
+  ];
+  if (providerType == AccountProviderType.openCodeGo) {
+    metrics.add(
+      _FloatingMetric(
+        l10n.monthlyWindow,
+        usage.monthlyPercent,
+        usage.monthlyResetAt,
+      ),
+    );
+  }
+  return metrics;
+}
+
+class _FloatingUsageLine extends StatelessWidget {
+  const _FloatingUsageLine({
+    required this.label,
+    required this.percent,
+    required this.resetAt,
+  });
+
+  final String label;
+  final double? percent;
+  final DateTime? resetAt;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final value = percent?.clamp(0, 100).toDouble();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(child: Text(label, style: const TextStyle(fontSize: 11))),
+            Text(
+              value == null ? '--' : '${value.toStringAsFixed(0)}%',
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ],
+        ),
+        const SizedBox(height: 3),
+        LinearProgressIndicator(value: value == null ? 0 : value / 100),
+        if (resetAt != null) ...[
+          const SizedBox(height: 3),
+          Text(
+            l10n.resetsApprox(formatRelativeReset(context, l10n, resetAt!)),
+            style: Theme.of(context).textTheme.labelSmall,
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _FloatingOpacityDialog extends StatefulWidget {
+  const _FloatingOpacityDialog({required this.initialValue});
+
+  final double initialValue;
+
+  @override
+  State<_FloatingOpacityDialog> createState() => _FloatingOpacityDialogState();
+}
+
+class _FloatingOpacityDialogState extends State<_FloatingOpacityDialog> {
+  late double _value = widget.initialValue;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return AlertDialog(
+      title: Text(l10n.floatingOpacity),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Slider(
+            value: _value,
+            min: AppSettings.minFloatingWindowOpacity,
+            max: AppSettings.maxFloatingWindowOpacity,
+            divisions: 11,
+            label: '${(_value * 100).round()}%',
+            onChanged: (value) => setState(() => _value = value),
+          ),
+          Text('${(_value * 100).round()}%'),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.cancel),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(_value),
+          child: Text(l10n.save),
+        ),
+      ],
+    );
+  }
+}
+
+class _FloatingAccountSelection {
+  const _FloatingAccountSelection({
+    required this.allAccounts,
+    required this.accountIds,
+  });
+
+  final bool allAccounts;
+  final List<String> accountIds;
+}
+
+class _FloatingAccountsDialog extends StatefulWidget {
+  const _FloatingAccountsDialog({
+    required this.allAccounts,
+    required this.accountIds,
+    required this.accounts,
+  });
+
+  final bool allAccounts;
+  final List<String> accountIds;
+  final List<ClaudeAccount> accounts;
+
+  @override
+  State<_FloatingAccountsDialog> createState() =>
+      _FloatingAccountsDialogState();
+}
+
+class _FloatingAccountsDialogState extends State<_FloatingAccountsDialog> {
+  late bool _allAccounts = widget.allAccounts;
+  late final Set<String> _accountIds = widget.accountIds.toSet();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return AlertDialog(
+      title: Text(l10n.floatingAccounts),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(l10n.floatingAllAccounts),
+              value: _allAccounts,
+              onChanged: (value) => setState(() {
+                _allAccounts = value;
+                if (value) _accountIds.clear();
+              }),
+            ),
+            if (!_allAccounts)
+              for (final account in widget.accounts)
+                CheckboxListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(account.label),
+                  value: _accountIds.contains(account.id),
+                  onChanged: (value) => setState(() {
+                    if (value == true) {
+                      _accountIds.add(account.id);
+                    } else {
+                      _accountIds.remove(account.id);
+                    }
+                  }),
+                ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.cancel),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(
+            _FloatingAccountSelection(
+              allAccounts: _allAccounts,
+              accountIds: _accountIds.toList(),
+            ),
+          ),
+          child: Text(l10n.save),
+        ),
+      ],
     );
   }
 }
@@ -545,6 +1104,7 @@ class _AccountCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final usage = account.lastKnownUsage;
     final accent = _severityColor(context);
+    final debugMode = context.watch<SettingsProvider>().debugMode;
 
     final providerIcon = switch (account.providerType) {
       AccountProviderType.claude => Icons.chat_bubble_outline,
@@ -661,7 +1221,7 @@ class _AccountCard extends StatelessWidget {
                             icon: const Icon(Icons.login, size: 18),
                             label: Text(l10n.reconnectButton),
                           ),
-                          if (usage?.rawPageText != null) ...[
+                          if (debugMode && usage?.rawPageText != null) ...[
                             const SizedBox(width: 8),
                             IconButton(
                               icon: const Icon(Icons.info_outline, size: 20),
@@ -696,6 +1256,7 @@ class _AccountCard extends StatelessWidget {
                       _ConnectionErrorView(
                         account: account,
                         errorText: account.lastFetchError ?? l10n.unknownReason,
+                        showTechnicalDetails: debugMode,
                         onRetry: onRefresh,
                       ),
                     ] else if (account.lastFetchError != null &&
@@ -985,11 +1546,13 @@ class _ConnectionErrorView extends StatefulWidget {
   const _ConnectionErrorView({
     required this.account,
     required this.errorText,
+    required this.showTechnicalDetails,
     required this.onRetry,
   });
 
   final ClaudeAccount account;
   final String errorText;
+  final bool showTechnicalDetails;
   final VoidCallback onRetry;
 
   @override
@@ -1031,11 +1594,13 @@ class _ConnectionErrorViewState extends State<_ConnectionErrorView> {
               ),
             ],
           ),
-          const SizedBox(height: 6),
-          Text(
-            widget.errorText,
-            style: TextStyle(fontSize: 12, color: colors.onErrorContainer),
-          ),
+          if (widget.showTechnicalDetails) ...[
+            const SizedBox(height: 6),
+            Text(
+              widget.errorText,
+              style: TextStyle(fontSize: 12, color: colors.onErrorContainer),
+            ),
+          ],
           const SizedBox(height: 8),
           Row(
             children: [

@@ -101,7 +101,7 @@ abstract class AppLocalizations {
   /// No description provided for @appTitle.
   ///
   /// In en, this message translates to:
-  /// **'Claude Usage Monitor'**
+  /// **'Usage Monitor'**
   String get appTitle;
 
   /// No description provided for @dashboardTitle.
@@ -565,6 +565,276 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'24h'**
   String get timeFormat24h;
+
+  /// No description provided for @floatingWindowSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Floating window'**
+  String get floatingWindowSection;
+
+  /// No description provided for @floatingWindowToggle.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep dashboard above other windows'**
+  String get floatingWindowToggle;
+
+  /// No description provided for @floatingWindowDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Linux and Windows: keep usage percentages visible while you work.'**
+  String get floatingWindowDescription;
+
+  /// No description provided for @localApiSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Local API'**
+  String get localApiSection;
+
+  /// No description provided for @localApiToggle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable local API'**
+  String get localApiToggle;
+
+  /// No description provided for @localApiDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Read-only API on this computer. Disabled by default; it only exposes normalized usage data and never exposes session cookies.'**
+  String get localApiDescription;
+
+  /// No description provided for @localApiPortLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Preferred port'**
+  String get localApiPortLabel;
+
+  /// No description provided for @localApiRateLimitLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Requests per minute'**
+  String get localApiRateLimitLabel;
+
+  /// No description provided for @localApiSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save API settings'**
+  String get localApiSave;
+
+  /// No description provided for @localApiRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'Running at http://127.0.0.1:{port}'**
+  String localApiRunning(int port);
+
+  /// No description provided for @localApiStopped.
+  ///
+  /// In en, this message translates to:
+  /// **'API is stopped'**
+  String get localApiStopped;
+
+  /// No description provided for @localApiDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Integration details'**
+  String get localApiDetails;
+
+  /// No description provided for @localApiDetailsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Local API integration'**
+  String get localApiDetailsTitle;
+
+  /// No description provided for @localApiSecretLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Secret key'**
+  String get localApiSecretLabel;
+
+  /// No description provided for @localApiAuth.
+  ///
+  /// In en, this message translates to:
+  /// **'Use the key as: Authorization: Bearer YOUR_SECRET_KEY'**
+  String get localApiAuth;
+
+  /// No description provided for @localApiEndpoints.
+  ///
+  /// In en, this message translates to:
+  /// **'GET /v1/health\nGET /v1/accounts\nGET /v1/usage\nGET /v1/accounts/account_id/usage'**
+  String get localApiEndpoints;
+
+  /// No description provided for @localApiAccountsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Account IDs'**
+  String get localApiAccountsLabel;
+
+  /// No description provided for @localApiNoAccounts.
+  ///
+  /// In en, this message translates to:
+  /// **'No accounts available.'**
+  String get localApiNoAccounts;
+
+  /// No description provided for @localApiCopy.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy'**
+  String get localApiCopy;
+
+  /// No description provided for @localApiRegenerate.
+  ///
+  /// In en, this message translates to:
+  /// **'Regenerate key'**
+  String get localApiRegenerate;
+
+  /// No description provided for @localApiRegenerateWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Existing integrations will stop working until they use the new key.'**
+  String get localApiRegenerateWarning;
+
+  /// No description provided for @localApiStartError.
+  ///
+  /// In en, this message translates to:
+  /// **'The local API could not start. Check the port and system credentials.'**
+  String get localApiStartError;
+
+  /// No description provided for @localApiInvalidSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid port and request limit.'**
+  String get localApiInvalidSettings;
+
+  /// No description provided for @pinnedNotificationSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Persistent notification'**
+  String get pinnedNotificationSection;
+
+  /// No description provided for @pinnedNotificationAllAccounts.
+  ///
+  /// In en, this message translates to:
+  /// **'Show all accounts'**
+  String get pinnedNotificationAllAccounts;
+
+  /// No description provided for @pinnedNotificationDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Android only. Unselect all accounts to hide this notification.'**
+  String get pinnedNotificationDescription;
+
+  /// No description provided for @pinnedNotificationAccounts.
+  ///
+  /// In en, this message translates to:
+  /// **'Accounts shown in the notification'**
+  String get pinnedNotificationAccounts;
+
+  /// No description provided for @pinnedNotificationNoAccounts.
+  ///
+  /// In en, this message translates to:
+  /// **'No accounts available.'**
+  String get pinnedNotificationNoAccounts;
+
+  /// No description provided for @widgetSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Android widgets'**
+  String get widgetSection;
+
+  /// No description provided for @widgetAllAccounts.
+  ///
+  /// In en, this message translates to:
+  /// **'Show all accounts in widgets'**
+  String get widgetAllAccounts;
+
+  /// No description provided for @widgetDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose which accounts appear in Android widgets. Unselect all to hide account data.'**
+  String get widgetDescription;
+
+  /// No description provided for @widgetAccounts.
+  ///
+  /// In en, this message translates to:
+  /// **'Accounts shown in widgets'**
+  String get widgetAccounts;
+
+  /// No description provided for @widgetNoAccounts.
+  ///
+  /// In en, this message translates to:
+  /// **'No accounts available.'**
+  String get widgetNoAccounts;
+
+  /// No description provided for @enterFloatingMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter floating mode'**
+  String get enterFloatingMode;
+
+  /// No description provided for @exitFloatingMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Exit floating mode'**
+  String get exitFloatingMode;
+
+  /// No description provided for @floatingModeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Usage monitor'**
+  String get floatingModeTitle;
+
+  /// No description provided for @floatingModeDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'This window stays above other windows.'**
+  String get floatingModeDescription;
+
+  /// No description provided for @floatingOpacity.
+  ///
+  /// In en, this message translates to:
+  /// **'Window opacity'**
+  String get floatingOpacity;
+
+  /// No description provided for @antigravityGeminiFiveHour.
+  ///
+  /// In en, this message translates to:
+  /// **'Gemini (5 hours)'**
+  String get antigravityGeminiFiveHour;
+
+  /// No description provided for @antigravityGeminiWeekly.
+  ///
+  /// In en, this message translates to:
+  /// **'Gemini (weekly)'**
+  String get antigravityGeminiWeekly;
+
+  /// No description provided for @antigravityClaudeGptFiveHour.
+  ///
+  /// In en, this message translates to:
+  /// **'Claude / GPT (5 hours)'**
+  String get antigravityClaudeGptFiveHour;
+
+  /// No description provided for @antigravityClaudeGptWeekly.
+  ///
+  /// In en, this message translates to:
+  /// **'Claude / GPT (weekly)'**
+  String get antigravityClaudeGptWeekly;
+
+  /// No description provided for @floatingAccounts.
+  ///
+  /// In en, this message translates to:
+  /// **'Floating mode accounts'**
+  String get floatingAccounts;
+
+  /// No description provided for @floatingAllAccounts.
+  ///
+  /// In en, this message translates to:
+  /// **'Show all accounts'**
+  String get floatingAllAccounts;
+
+  /// No description provided for @floatingNoAccounts.
+  ///
+  /// In en, this message translates to:
+  /// **'No accounts selected.'**
+  String get floatingNoAccounts;
 
   /// No description provided for @focusModeAccountsSection.
   ///

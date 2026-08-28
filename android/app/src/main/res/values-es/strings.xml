@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Monitor de uso</string>
+    <string name="widget_choose_account">Elegir cuenta</string>
+    <string name="widget_save">Guardar</string>
+    <string name="widget_no_accounts">No hay cuentas configuradas</string>
+    <string name="widget_overview_description">Límites de uso de las cuentas seleccionadas</string>
+    <string name="widget_header">MONITOR DE USO</string>
+    <string name="widget_overview_subtitle">Cuentas seleccionadas</string>
+    <string name="widget_session_label">Sesión · 5 h</string>
+    <string name="widget_weekly_label">Semanal · 7 d</string>
+    <string name="widget_percent">%1$d%%</string>
+    <string name="widget_five_compact">5 h %1$d%%</string>
+    <string name="widget_weekly_compact">7 d %1$d%%</string>
+    <string name="widget_session_pending">--</string>
+    <string name="widget_weekly_pending">--</string>
+    <string name="widget_error">No se pudo consultar el uso</string>
+    <string name="widget_session_expired">Sesión expirada</string>
+    <string name="widget_relogin">Abre la app para iniciar sesión</string>
+    <string name="widget_no_data">Sin datos</string>
+    <string name="widget_usage_format">5 h %1$d%% · 7 d %2$d%%</string>
+</resources>

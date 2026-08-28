@@ -5,7 +5,20 @@ tagged release. Format loosely follows [Keep a Changelog](https://keepachangelog
 
 ## [Unreleased]
 
-- docs: note how to request Android internal tester access in the README
+No changes yet.
+
+## [1.3.0] - 2026-08-28
+
+- feat: local read-only API for Linux and Windows with generated account IDs,
+  random secret keys, configurable ports, and rate limiting
+- feat: Android home-screen widgets with account selection, all-account
+  overview, provider labels, and horizontal/vertical resizing
+- feat: Android pinned usage notification with selectable accounts
+- feat: desktop floating usage monitor with always-on-top behavior, opacity,
+  account selection, reset timers, and provider labels
+- fix: Android release builds retain network access and existing WebView
+  sessions while publishing normalized usage to widgets and notifications
+- docs: document local API setup, authentication, endpoints, and security
 
 ## [1.2.1] - 2026-08-04
 

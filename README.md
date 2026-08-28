@@ -1,4 +1,4 @@
-# Claude Usage Monitor
+# Usage Monitor
 
 Unofficial, community tool. **Not affiliated with, endorsed by, or built by Anthropic.**
 
@@ -162,6 +162,16 @@ needs a different approach), system tray (Linux/Windows), local
 notifications on threshold crossings, focus/fullscreen mode, Claude status
 integration, configurable themes/thresholds, and an Android background
 keep-alive ping to avoid session expiry.
+
+### Local API (Linux/Windows)
+
+The optional local read-only API is disabled by default. It binds only to
+`127.0.0.1`, uses a randomly generated bearer secret stored in the operating
+system credential store, applies a configurable requests-per-minute limit, and
+exposes generated account IDs plus normalized cached usage data. It never
+exposes WebView cookies, provider tokens, raw responses, or an endpoint that
+sends model messages. See [docs/local-api.md](docs/local-api.md) for setup and
+examples.
 
 Not implemented: iOS/macOS (no reason it couldn't work, just untested and
 unbuilt).
