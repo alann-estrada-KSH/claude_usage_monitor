@@ -30,7 +30,15 @@ cp -r "$BUNDLE_DIR"/. "$STAGE/opt/$PKG/"
 
 cat > "$STAGE/usr/bin/$PKG" <<EOF
 #!/bin/sh
-exec /opt/$PKG/claude_usage_monitor "\$@"
+/opt/$PKG/claude_usage_monitor "\$@"
+status=\$?
+
+# ponytail: retry only native SIGSEGV; keep hardware rendering for healthy runs.
+if [ "\$status" -eq 139 ] && [ "\${LIBGL_ALWAYS_SOFTWARE:-}" != 1 ]; then
+  exec env LIBGL_ALWAYS_SOFTWARE=1 /opt/$PKG/claude_usage_monitor "\$@"
+fi
+
+exit "\$status"
 EOF
 chmod +x "$STAGE/usr/bin/$PKG"
 

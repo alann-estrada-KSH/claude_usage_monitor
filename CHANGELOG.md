@@ -7,6 +7,11 @@ tagged release. Format loosely follows [Keep a Changelog](https://keepachangelog
 
 No changes yet.
 
+## [1.3.2] - 2026-08-28
+
+- fix: retry Linux startup with software rendering after a native GPU
+  `SIGSEGV`, preserving hardware rendering for healthy launches
+
 ## [1.3.1] - 2026-08-28
 
 - fix: restore the individual Android widget to a compact 2×1 layout while
