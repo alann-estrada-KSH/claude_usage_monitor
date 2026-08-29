@@ -7,6 +7,11 @@ tagged release. Format loosely follows [Keep a Changelog](https://keepachangelog
 
 No changes yet.
 
+## [1.3.1] - 2026-08-28
+
+- fix: restore the individual Android widget to a compact 2×1 layout while
+  keeping session and weekly usage visible side by side
+
 ## [1.3.0] - 2026-08-28
 
 - feat: local read-only API for Linux and Windows with generated account IDs,
