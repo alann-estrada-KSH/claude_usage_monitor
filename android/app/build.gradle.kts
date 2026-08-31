@@ -65,6 +65,14 @@ android {
             } else {
                 null
             }
+            // Bundles native (.so) debug symbols straight into the .aab so
+            // Play Console can de-obfuscate native crash/ANR stack traces --
+            // otherwise it warns "no subiste símbolos de depuración" (this
+            // is separate from the R8/mappingFile Java/Kotlin deobfuscation
+            // handled in release.yml).
+            ndk {
+                debugSymbolLevel = "FULL"
+            }
         }
     }
 }
