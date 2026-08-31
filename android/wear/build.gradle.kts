@@ -31,8 +31,8 @@ android {
         // +10000 offset from the phone's build number keeps this and the
         // phone's versionCode permanently out of each other's way; bump it
         // in lockstep with pubspec.yaml's build number (phone + 10000).
-        versionCode = 10024
-        versionName = "1.4.7"
+        versionCode = 10025
+        versionName = "1.4.8"
     }
 
     compileOptions {

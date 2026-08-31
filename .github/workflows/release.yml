@@ -183,6 +183,11 @@ jobs:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_JSON_KEY }}
           packageName: com.claudeusagemonitor.claude_usage_monitor
           releaseFiles: build/app/outputs/bundle/release/app-release.aab
+          # Flutter's Gradle plugin enables R8 by default for release
+          # builds (no explicit minifyEnabled in android/app/build.gradle.kts
+          # needed) -- without this, Play Console warns that crash/ANR
+          # reports can't be de-obfuscated back to real class/method names.
+          mappingFile: build/app/outputs/mapping/release/mapping.txt
           track: internal
           status: completed
 

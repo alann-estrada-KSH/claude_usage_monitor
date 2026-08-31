@@ -7,6 +7,14 @@ tagged release. Format loosely follows [Keep a Changelog](https://keepachangelog
 
 No changes yet.
 
+## [1.4.8] - 2026-08-31
+
+- ci: upload the R8 mapping file (`build/app/outputs/mapping/release/mapping.txt`)
+  alongside the phone `.aab` to the Play Store internal track, so crash
+  and ANR reports in Play Console de-obfuscate back to real class/method
+  names instead of the "No hay un archivo de desofuscación asociado"
+  warning
+
 ## [1.4.7] - 2026-08-31
 
 - fix: give the wear module its own `versionCode` range (`+10000` offset
