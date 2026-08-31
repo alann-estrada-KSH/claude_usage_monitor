@@ -7,6 +7,17 @@ tagged release. Format loosely follows [Keep a Changelog](https://keepachangelog
 
 No changes yet.
 
+## [1.4.3] - 2026-08-31
+
+- feat: embed the Wear OS module in the phone app's bundle instead of
+  shipping it as a separately-installed APK -- `wear` now shares the phone
+  app's applicationId and is wired in via a `wearApp` Gradle dependency, so
+  Play Store auto-delivers it to a paired watch under the same listing when
+  the phone app updates, with no separate upload/track/install step
+- ci: drop the now-redundant `:wear:assembleRelease` step and wear APK from
+  the Play Store upload -- `flutter build appbundle --release` builds and
+  embeds it automatically as part of `:app`'s bundle
+
 ## [1.4.2] - 2026-08-31
 
 - ci: fix `releaseFiles` in the Play Store upload step -- it's a

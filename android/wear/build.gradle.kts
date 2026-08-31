@@ -16,11 +16,14 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.claudeusagemonitor.claude_usage_monitor.wear"
+        // Must match the phone app's applicationId -- Play Store only embeds
+        // and auto-delivers a Wear OS module to paired watches (via the
+        // `wearApp` dependency in android/app) when both share one app ID.
+        applicationId = "com.claudeusagemonitor.claude_usage_monitor"
         minSdk = 26
         targetSdk = 35
-        versionCode = 19
-        versionName = "1.4.2"
+        versionCode = 20
+        versionName = "1.4.3"
     }
 
     compileOptions {
