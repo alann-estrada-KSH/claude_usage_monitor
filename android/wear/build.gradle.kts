@@ -19,8 +19,8 @@ android {
         applicationId = "com.claudeusagemonitor.claude_usage_monitor.wear"
         minSdk = 26
         targetSdk = 35
-        versionCode = 18
-        versionName = "1.4.1"
+        versionCode = 19
+        versionName = "1.4.2"
     }
 
     compileOptions {
