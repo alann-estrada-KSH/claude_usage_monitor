@@ -78,12 +78,14 @@ sideload the debug/release APK, without waiting on any of that.
 **Wear OS:** the `wear` Android module receives only sanitized usage JSON
 from the phone through the Wear Data Layer -- cookies, OAuth tokens and
 provider sessions never leave the phone. It shares the phone app's
-applicationId and is embedded in the phone's app bundle (`wearApp` Gradle
-dependency in `android/app`), so Play Store auto-installs it on a paired
-watch once the phone app updates -- no separate install step. To sideload
-it directly instead, build `:wear:assembleRelease` and install the
-resulting `wear-release.apk` on the watch; the app and configurable account
-complication show last-known values and stale state.
+applicationId but ships as its own separate release artifact
+(`wear-release.apk`, attached to each GitHub Release) -- Play Console
+treats Wear OS as its own release segment (Advanced settings > Form
+factors > Wear OS) with its own guided upload flow, distinct from the
+phone's internal track. To sideload it directly instead, build
+`:wear:assembleRelease` and install the resulting `wear-release.apk` on
+the watch; the app and configurable account complication show last-known
+values and stale state.
 
 **Tasker:** send broadcast action
 `com.claudeusagemonitor.claude_usage_monitor.TASKER_REFRESH`. It opens the
