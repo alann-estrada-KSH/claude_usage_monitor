@@ -209,7 +209,7 @@ jobs:
           releaseFiles: build/wear/outputs/bundle/release/wear-release.aab
           # Default internal-testing track name in the Publishing API is qa.
           # Use wear:<custom-track> if Play Console created a named closed track.
-          tracks: wear:qa
+          tracks: wear:internal
           status: completed
 
       # Keep a signed Wear bundle available if its dedicated-track upload

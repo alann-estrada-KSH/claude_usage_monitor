@@ -7,6 +7,11 @@ tagged release. Format loosely follows [Keep a Changelog](https://keepachangelog
 
 No changes yet.
 
+## [1.4.12] - 2026-08-31
+
+- fix: target the existing Wear OS internal testing track exposed by Play
+  Console (`wear:internal`)
+
 ## [1.4.11] - 2026-08-31
 
 - fix: publish phone and Wear OS bundles to their dedicated Google Play
