@@ -3,10 +3,16 @@ name: Release
 # Tag push (v1.2.3) builds Linux + Windows + Android, publishes the first
 # two to a GitHub Release, republishes the apt repo (Linux) to GitHub Pages
 # so `apt update && apt upgrade` picks up the new version, and uploads the
-# Android build straight to the Play Store's internal track. See
+# phone Android build straight to the Play Store's internal track. See
 # packaging/linux/build_deb.sh and packaging/windows/installer.iss for the
 # actual packaging steps this just wires together, and the README for the
 # apt install line end users run once.
+#
+# The wear module is a separate app sharing the phone's applicationId, but
+# Play Console's "Wear OS" form factor is its own release segment with its
+# own guided upload flow (Advanced settings > Form factors > Wear OS) --
+# there's no known Play Developer API support for it yet, so this instead
+# publishes wear-release.apk to the GitHub Release for manual upload there.
 #
 # build-android needs three repo secrets (see android/key.properties and
 # ~/keystores/ locally for what these mirror -- never committed):
@@ -167,6 +173,8 @@ jobs:
 
       - run: flutter pub get
       - run: flutter build appbundle --release
+      - run: ./gradlew :wear:assembleRelease
+        working-directory: android
 
       - name: Upload to Play Store (internal track)
         uses: r0adkll/upload-google-play@v1
@@ -176,3 +184,14 @@ jobs:
           releaseFiles: build/app/outputs/bundle/release/app-release.aab
           track: internal
           status: completed
+
+      # Play Console's "Wear OS" form factor is a separate release segment
+      # from the phone's -- it wants its own dedicated APK/AAB uploaded
+      # through its own guided flow (Play Console > Advanced settings >
+      # Form factors > Wear OS), not embedded in the phone's bundle. No API
+      # support for that segment is known yet, so publish the wear APK here
+      # for manual upload instead.
+      - name: Publish wear APK to the GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/wear/outputs/apk/release/wear-release.apk

@@ -45,10 +45,6 @@ android {
     dependencies {
         coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
         implementation("com.google.android.gms:play-services-wearable:19.0.0")
-        // Embeds :wear's release APK into this app's bundle so Play Store
-        // auto-delivers it to paired watches under this same listing --
-        // requires :wear's applicationId to match this one.
-        wearApp(project(":wear"))
     }
 
     signingConfigs {

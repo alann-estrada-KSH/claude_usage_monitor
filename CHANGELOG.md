@@ -7,6 +7,20 @@ tagged release. Format loosely follows [Keep a Changelog](https://keepachangelog
 
 No changes yet.
 
+## [1.4.5] - 2026-08-31
+
+- fix: revert embedding `wear` into the phone app bundle (`wearApp` Gradle
+  dependency) -- confirmed against a real Play Console upload that this
+  legacy mechanism does not produce a bundle split Play recognizes as
+  targeting Wear OS (the uploaded `.aab`'s declared features showed only
+  `android.hardware.faketouch`, no watch feature at all). Play Console
+  treats "Wear OS" as its own release segment (Advanced settings > Form
+  factors > Wear OS) that wants a dedicated, separately-uploaded APK/AAB,
+  not one embedded in the phone's bundle
+- ci: restore the separate `:wear:assembleRelease` build and publish
+  `wear-release.apk` to the GitHub Release, for manual upload to that Wear
+  OS segment (no known Play Developer API support for it yet)
+
 ## [1.4.4] - 2026-08-31
 
 - fix: explicitly declare `android:required="true"` on the wear module's
