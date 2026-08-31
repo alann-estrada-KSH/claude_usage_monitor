@@ -14,13 +14,20 @@ No changes yet.
   native crash/ANR stack traces -- separate from the R8/Java mapping file
   wired up in v1.4.8; Play Console was still warning "no subiste símbolos
   de depuración" for this because native symbols are a different artifact
+- ci: also try uploading `wear-release.aab` alongside the phone `.aab` in
+  the same Play Store internal-track upload -- now that applicationId,
+  the watch `uses-feature`, and non-colliding versionCodes are all in
+  place, Play's classic multi-APK device routing (one edit, multiple
+  artifacts, each's manifest deciding who gets it) may recognize it for
+  the Wear OS form factor without the manual Play Console upload step
 - ci: publish `wear-release.aab` to its own draft GitHub Release
-  (`wear-vX.Y.Z`, never published) instead of the public `vX.Y.Z` one --
-  confirmed there's no Play Developer API support for uploading directly
-  into the Wear OS form-factor segment (checked the androidpublisher v3
-  discovery document directly: `edits.tracks` has no form-factor/device-
-  segment concept), and a signed release build has no business being
-  publicly downloadable in a public repo while that stays a manual step
+  (`wear-vX.Y.Z`, never published) instead of the public `vX.Y.Z` one as
+  a fallback either way -- confirmed there's no dedicated Play Developer
+  API support for the Wear OS form-factor segment itself (checked the
+  androidpublisher v3 discovery document directly: `edits.tracks` has no
+  form-factor/device-segment field), and a signed release build has no
+  business being publicly downloadable in a public repo while that stays
+  a manual step
 
 ## [1.4.8] - 2026-08-31
 

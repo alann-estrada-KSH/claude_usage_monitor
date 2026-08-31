@@ -8,14 +8,18 @@ name: Release
 # actual packaging steps this just wires together, and the README for the
 # apt install line end users run once.
 #
-# The wear module is a separate app sharing the phone's applicationId, but
-# Play Console's "Wear OS" form factor is its own release segment with its
-# own guided upload flow (Advanced settings > Form factors > Wear OS) --
-# there's no known Play Developer API support for it yet, so this instead
-# publishes wear-release.aab to its own DRAFT GitHub Release (tag
-# wear-vX.Y.Z, never published -- this repo is public, and a signed build
-# has no business being publicly downloadable) for manual upload there
-# (that segment rejects a plain .apk).
+# The wear module is a separate app sharing the phone's applicationId.
+# build-android now tries uploading both the phone and wear .aabs together
+# to the same "internal" track/edit (classic Play multi-APK: each
+# artifact's manifest, e.g. the wear one's required android.hardware.
+# type.watch, routes it to the right device type) -- this may or may not
+# make Play Console recognize it for the "Wear OS" form factor segment
+# (Advanced settings > Form factors > Wear OS), which otherwise has its
+# own guided manual upload flow with no confirmed API equivalent. As a
+# fallback either way, wear-release.aab also publishes to its own DRAFT
+# GitHub Release (tag wear-vX.Y.Z, never published -- this repo is public,
+# and a signed build has no business being publicly downloadable) for
+# manual upload there (that segment rejects a plain .apk).
 #
 # build-android needs three repo secrets (see android/key.properties and
 # ~/keystores/ locally for what these mirror -- never committed):
@@ -179,33 +183,41 @@ jobs:
       - run: ./gradlew :wear:bundleRelease
         working-directory: android
 
+      # Uploading both bundles to the same edit/track, each with its own
+      # versionCode, is the classic Play "multi-APK" mechanism: Play reads
+      # each artifact's manifest (uses-feature android.hardware.type.watch
+      # on the wear one) to route it to the right device type. This needs
+      # applicationId, the watch feature, and non-colliding versionCodes to
+      # all line up first, which earlier releases didn't have -- worth
+      # retrying now that they do, as an alternative to the manual Play
+      # Console "Form Factors > Wear OS" upload flow below.
       - name: Upload to Play Store (internal track)
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_JSON_KEY }}
           packageName: com.claudeusagemonitor.claude_usage_monitor
-          releaseFiles: build/app/outputs/bundle/release/app-release.aab
+          releaseFiles: build/app/outputs/bundle/release/app-release.aab,build/wear/outputs/bundle/release/wear-release.aab
           # Flutter's Gradle plugin enables R8 by default for release
           # builds (no explicit minifyEnabled in android/app/build.gradle.kts
           # needed) -- without this, Play Console warns that crash/ANR
           # reports can't be de-obfuscated back to real class/method names.
+          # Wear has no R8/minify configured, so no mapping file for it.
           mappingFile: build/app/outputs/mapping/release/mapping.txt
           track: internal
           status: completed
 
-      # Play Console's "Wear OS" form factor is a separate release segment
-      # from the phone's -- it wants its own dedicated .aab uploaded through
-      # its own guided flow (Play Console > Advanced settings > Form
-      # factors > Wear OS), not embedded in the phone's bundle, and rejects
-      # a plain .apk there ("Carga un paquete de aplicación válido"). No API
-      # support for that segment is known yet (confirmed against the
-      # androidpublisher v3 discovery doc -- edits.tracks has no
-      # formFactor/device-segment concept), so publish the wear .aab for
-      # manual upload instead. It goes to its own draft release (a
-      # separate tag, never published) rather than the public vX.Y.Z one,
-      # since this repo is public and a signed release build isn't meant
-      # for random visitors to grab -- only repo collaborators can see a
-      # draft release's assets.
+      # Fallback in case the combined upload above doesn't make Play
+      # Console recognize the wear artifact for its "Wear OS" form-factor
+      # segment (Advanced settings > Form factors > Wear OS) -- that
+      # segment has its own guided upload flow and rejects a plain .apk
+      # ("Carga un paquete de aplicación válido"). No dedicated API
+      # support for that segment is confirmed (checked the androidpublisher
+      # v3 discovery doc -- edits.tracks has no formFactor/device-segment
+      # field), so this keeps the .aab available for manual upload there.
+      # Goes to its own draft release (a separate tag, never published)
+      # rather than the public vX.Y.Z one, since this repo is public and a
+      # signed release build isn't meant for random visitors to grab --
+      # only repo collaborators can see a draft release's assets.
       - name: Publish wear bundle to a draft GitHub Release
         uses: softprops/action-gh-release@v2
         with:
