@@ -12,7 +12,9 @@ name: Release
 # Play Console's "Wear OS" form factor is its own release segment with its
 # own guided upload flow (Advanced settings > Form factors > Wear OS) --
 # there's no known Play Developer API support for it yet, so this instead
-# publishes wear-release.aab to the GitHub Release for manual upload there
+# publishes wear-release.aab to its own DRAFT GitHub Release (tag
+# wear-vX.Y.Z, never published -- this repo is public, and a signed build
+# has no business being publicly downloadable) for manual upload there
 # (that segment rejects a plain .apk).
 #
 # build-android needs three repo secrets (see android/key.properties and
@@ -196,9 +198,18 @@ jobs:
       # its own guided flow (Play Console > Advanced settings > Form
       # factors > Wear OS), not embedded in the phone's bundle, and rejects
       # a plain .apk there ("Carga un paquete de aplicación válido"). No API
-      # support for that segment is known yet, so publish the wear .aab
-      # here for manual upload instead.
-      - name: Publish wear bundle to the GitHub Release
+      # support for that segment is known yet (confirmed against the
+      # androidpublisher v3 discovery doc -- edits.tracks has no
+      # formFactor/device-segment concept), so publish the wear .aab for
+      # manual upload instead. It goes to its own draft release (a
+      # separate tag, never published) rather than the public vX.Y.Z one,
+      # since this repo is public and a signed release build isn't meant
+      # for random visitors to grab -- only repo collaborators can see a
+      # draft release's assets.
+      - name: Publish wear bundle to a draft GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: wear-${{ github.ref_name }}
+          name: Wear OS build ${{ github.ref_name }}
+          draft: true
           files: build/wear/outputs/bundle/release/wear-release.aab
