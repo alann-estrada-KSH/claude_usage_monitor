@@ -75,11 +75,15 @@ release, so feel free to open one just to volunteer even without a specific
 issue in mind. You can also build and `flutter install` it yourself, or
 sideload the debug/release APK, without waiting on any of that.
 
-**Wear OS:** the separate `wear` Android module receives only sanitized usage
-JSON from the phone through the Wear Data Layer. Cookies, OAuth tokens and
-provider sessions never leave the phone. Build `:wear:assembleRelease` and
-install the resulting `wear-release.apk` on a Wear OS watch; the app and
-configurable account complication show last-known values and stale state.
+**Wear OS:** the `wear` Android module receives only sanitized usage JSON
+from the phone through the Wear Data Layer -- cookies, OAuth tokens and
+provider sessions never leave the phone. It shares the phone app's
+applicationId and is embedded in the phone's app bundle (`wearApp` Gradle
+dependency in `android/app`), so Play Store auto-installs it on a paired
+watch once the phone app updates -- no separate install step. To sideload
+it directly instead, build `:wear:assembleRelease` and install the
+resulting `wear-release.apk` on the watch; the app and configurable account
+complication show last-known values and stale state.
 
 **Tasker:** send broadcast action
 `com.claudeusagemonitor.claude_usage_monitor.TASKER_REFRESH`. It opens the
