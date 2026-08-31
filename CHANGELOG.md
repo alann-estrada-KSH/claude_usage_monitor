@@ -7,6 +7,22 @@ tagged release. Format loosely follows [Keep a Changelog](https://keepachangelog
 
 No changes yet.
 
+## [1.4.0] - 2026-08-31
+
+- feat: Wear OS companion module -- syncs sanitized usage JSON (no cookies,
+  OAuth tokens, or provider sessions) from the phone over the Wear Data
+  Layer to a watch app and a configurable usage complication
+- feat: Tasker integration -- broadcasting
+  `com.claudeusagemonitor.claude_usage_monitor.TASKER_REFRESH` opens the app
+  and triggers its normal refresh path, rate-limited to once per 30 seconds
+- ci: release workflow now also builds `:wear:assembleRelease` and uploads
+  the resulting APK to the Play Store internal track alongside the phone AAB
+- fix: Windows auto-update now checks the downloaded installer's Authenticode
+  signature before running it, and refuses to launch unsigned installers
+  (current unsigned builds require manual install until signing is set up)
+- fix: restrict Windows update downloads to `github.com`/`githubusercontent.com`
+  hosts
+
 ## [1.3.2] - 2026-08-28
 
 - fix: retry Linux startup with software rendering after a native GPU
