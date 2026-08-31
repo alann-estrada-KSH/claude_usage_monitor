@@ -7,6 +7,14 @@ tagged release. Format loosely follows [Keep a Changelog](https://keepachangelog
 
 No changes yet.
 
+## [1.4.4] - 2026-08-31
+
+- fix: explicitly declare `android:required="true"` on the wear module's
+  `android.hardware.type.watch` `<uses-feature>` -- Android treats it as
+  required by default when the attribute is omitted, but Play Console's
+  device-catalog validation for the bundle's Wear segment checks for the
+  explicit declaration and rejected the v1.4.3 upload for missing it
+
 ## [1.4.3] - 2026-08-31
 
 - feat: embed the Wear OS module in the phone app's bundle instead of
