@@ -7,6 +7,14 @@ tagged release. Format loosely follows [Keep a Changelog](https://keepachangelog
 
 No changes yet.
 
+## [1.4.9] - 2026-08-31
+
+- fix: bundle native (.so) debug symbols into the phone `.aab`
+  (`ndk.debugSymbolLevel = "FULL"`) so Play Console can de-obfuscate
+  native crash/ANR stack traces -- separate from the R8/Java mapping file
+  wired up in v1.4.8; Play Console was still warning "no subiste símbolos
+  de depuración" for this because native symbols are a different artifact
+
 ## [1.4.8] - 2026-08-31
 
 - ci: upload the R8 mapping file (`build/app/outputs/mapping/release/mapping.txt`)
