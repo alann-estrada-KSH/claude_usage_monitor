@@ -7,6 +7,14 @@ tagged release. Format loosely follows [Keep a Changelog](https://keepachangelog
 
 No changes yet.
 
+## [1.4.6] - 2026-08-31
+
+- ci: build the wear module as an app bundle (`:wear:bundleRelease`)
+  instead of a raw APK -- Play Console's "Wear OS" form factor segment
+  rejected the v1.4.5 `.apk` upload outright ("Carga un paquete de
+  aplicación válido"), requiring an `.aab` instead. Publishes
+  `wear-release.aab` to the GitHub Release in its place
+
 ## [1.4.5] - 2026-08-31
 
 - fix: revert embedding `wear` into the phone app bundle (`wearApp` Gradle

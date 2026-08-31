@@ -12,7 +12,8 @@ name: Release
 # Play Console's "Wear OS" form factor is its own release segment with its
 # own guided upload flow (Advanced settings > Form factors > Wear OS) --
 # there's no known Play Developer API support for it yet, so this instead
-# publishes wear-release.apk to the GitHub Release for manual upload there.
+# publishes wear-release.aab to the GitHub Release for manual upload there
+# (that segment rejects a plain .apk).
 #
 # build-android needs three repo secrets (see android/key.properties and
 # ~/keystores/ locally for what these mirror -- never committed):
@@ -173,7 +174,7 @@ jobs:
 
       - run: flutter pub get
       - run: flutter build appbundle --release
-      - run: ./gradlew :wear:assembleRelease
+      - run: ./gradlew :wear:bundleRelease
         working-directory: android
 
       - name: Upload to Play Store (internal track)
@@ -186,12 +187,13 @@ jobs:
           status: completed
 
       # Play Console's "Wear OS" form factor is a separate release segment
-      # from the phone's -- it wants its own dedicated APK/AAB uploaded
-      # through its own guided flow (Play Console > Advanced settings >
-      # Form factors > Wear OS), not embedded in the phone's bundle. No API
-      # support for that segment is known yet, so publish the wear APK here
-      # for manual upload instead.
-      - name: Publish wear APK to the GitHub Release
+      # from the phone's -- it wants its own dedicated .aab uploaded through
+      # its own guided flow (Play Console > Advanced settings > Form
+      # factors > Wear OS), not embedded in the phone's bundle, and rejects
+      # a plain .apk there ("Carga un paquete de aplicación válido"). No API
+      # support for that segment is known yet, so publish the wear .aab
+      # here for manual upload instead.
+      - name: Publish wear bundle to the GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: build/wear/outputs/apk/release/wear-release.apk
+          files: build/wear/outputs/bundle/release/wear-release.aab
