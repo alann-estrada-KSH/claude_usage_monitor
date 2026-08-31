@@ -7,6 +7,17 @@ tagged release. Format loosely follows [Keep a Changelog](https://keepachangelog
 
 No changes yet.
 
+## [1.4.7] - 2026-08-31
+
+- fix: give the wear module its own `versionCode` range (`+10000` offset
+  from the phone's build number) instead of mirroring the phone's exactly
+  -- Play Console rejected the v1.4.6 wear upload with "Ya se usó el
+  código de la versión 23" because `versionCode` uniqueness is enforced
+  per applicationId (which the wear module now shares with the phone),
+  not per form-factor segment. Device targeting still comes entirely from
+  each artifact's declared compatibility (uses-feature, screen sizes,
+  SDK range), so the two version numbers no longer need to match
+
 ## [1.4.6] - 2026-08-31
 
 - ci: build the wear module as an app bundle (`:wear:bundleRelease`)
