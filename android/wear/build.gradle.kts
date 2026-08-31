@@ -16,14 +16,23 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        // Must match the phone app's applicationId -- Play Store only embeds
-        // and auto-delivers a Wear OS module to paired watches (via the
-        // `wearApp` dependency in android/app) when both share one app ID.
+        // Must match the phone app's applicationId -- Play Console's "Wear
+        // OS" form factor segment ties a release to the same app listing
+        // as the phone only when both share one app ID.
         applicationId = "com.claudeusagemonitor.claude_usage_monitor"
         minSdk = 26
         targetSdk = 35
-        versionCode = 23
-        versionName = "1.4.6"
+        // versionCode must be unique across the whole app (Play tracks it
+        // per applicationId, not per form factor/segment) and always
+        // increasing for this artifact's own release history -- it does
+        // NOT need to match the phone's versionCode, since Play routes by
+        // each artifact's declared device compatibility (uses-feature,
+        // screen sizes, min/max SDK), not by version number. A fixed
+        // +10000 offset from the phone's build number keeps this and the
+        // phone's versionCode permanently out of each other's way; bump it
+        // in lockstep with pubspec.yaml's build number (phone + 10000).
+        versionCode = 10024
+        versionName = "1.4.7"
     }
 
     compileOptions {
