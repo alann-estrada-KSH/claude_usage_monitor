@@ -168,6 +168,7 @@ jobs:
       - run: flutter pub get
       - run: flutter build appbundle --release
       - run: ./gradlew :wear:assembleRelease
+        working-directory: android
 
       - name: Upload to Play Store (internal track)
         uses: r0adkll/upload-google-play@v1

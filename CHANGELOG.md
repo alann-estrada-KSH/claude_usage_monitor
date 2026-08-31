@@ -7,6 +7,14 @@ tagged release. Format loosely follows [Keep a Changelog](https://keepachangelog
 
 No changes yet.
 
+## [1.4.1] - 2026-08-31
+
+- ci: fix `build-android` running `./gradlew :wear:assembleRelease` from the
+  repo root instead of `android/` -- the wrapper lives there, so the step
+  failed immediately (`exit code 127`) and the v1.4.0 tag published the
+  Linux and Windows assets but never reached the Play Store upload
+- chore: version bump to re-run the release workflow end-to-end
+
 ## [1.4.0] - 2026-08-31
 
 - feat: Wear OS companion module -- syncs sanitized usage JSON (no cookies,
