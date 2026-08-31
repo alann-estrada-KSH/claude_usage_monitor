@@ -7,6 +7,15 @@ tagged release. Format loosely follows [Keep a Changelog](https://keepachangelog
 
 No changes yet.
 
+## [1.4.2] - 2026-08-31
+
+- ci: fix `releaseFiles` in the Play Store upload step -- it's a
+  comma-separated list (`fast-glob` under the hood), not one path per line;
+  the multi-line YAML block from v1.4.1 concatenated both paths into a
+  single literal pattern (embedded `\n` and all), so the action could not
+  find even the `.aab` that had just built successfully
+- chore: version bump to re-run the release workflow end-to-end
+
 ## [1.4.1] - 2026-08-31
 
 - ci: fix `build-android` running `./gradlew :wear:assembleRelease` from the
