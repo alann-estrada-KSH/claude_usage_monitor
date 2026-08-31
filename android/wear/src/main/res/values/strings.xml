@@ -2,6 +2,16 @@
     <string name="app_name">Usage Monitor</string>
     <string name="no_phone_data">Open the phone app to sync data.</string>
     <string name="watch_title">Usage Monitor</string>
+    <string name="watch_phone_source">SYNCED FROM PHONE</string>
+    <string name="watch_open_phone">Open phone app</string>
+    <string name="watch_sync_sent">Phone app opened · syncing</string>
+    <string name="watch_sync_unavailable">Phone unavailable · try again nearby</string>
+    <string name="watch_last_sync">Updated %1$s</string>
+    <string name="watch_5h">5h</string>
+    <string name="watch_7d">7d</string>
+    <string name="watch_stale">STALE</string>
+    <string name="watch_session_expired">RELOGIN REQUIRED</string>
+    <string name="watch_provider_error">SYNC ERROR</string>
     <string name="complication_choose_account">Complication account</string>
     <string name="complication_save">Save</string>
 </resources>

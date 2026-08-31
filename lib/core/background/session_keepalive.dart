@@ -58,9 +58,10 @@ void sessionKeepAliveCallbackDispatcher() {
             fetchedAt: DateTime.now(),
           );
           await accountStore.save(updated);
-          await alerts.checkProviderAvailability(
+          await alerts.checkAccountAvailability(
             account: updated,
             privacyMode: settings.pinnedNotificationPrivacyMode,
+            languageCode: settings.languageCode,
           );
           if (snapshot.isAvailable) {
             await alerts.check(

@@ -797,6 +797,50 @@ class AppLocalizationsEs extends AppLocalizations {
       'Solo muestra el estado de cuentas y actualizaciones. Nunca incluye tokens, cookies ni respuestas sin procesar del proveedor.';
 
   @override
+  String get dashboardFilters => 'Vista';
+
+  @override
+  String dashboardFilterSummary(
+    String account,
+    String provider,
+    String period,
+  ) {
+    return '$account · $provider · $period';
+  }
+
+  @override
+  String get clearDashboardFilters => 'Limpiar filtros';
+
+  @override
+  String get filterAccount => 'Cuenta';
+
+  @override
+  String get filterProvider => 'Proveedor';
+
+  @override
+  String get filterHistory => 'Historial';
+
+  @override
+  String get filterDone => 'Listo';
+
+  @override
+  String get wearSection => 'Wear OS';
+
+  @override
+  String get wearDescription =>
+      'El reloj recibe datos de uso sanitizados desde este teléfono. Las sesiones y credenciales permanecen en el teléfono.';
+
+  @override
+  String get wearSyncButton => 'Enviar datos actuales al reloj';
+
+  @override
+  String get wearSyncSent => 'Datos actuales enviados al reloj.';
+
+  @override
+  String get wearSyncUnavailable =>
+      'La sincronización con el reloj no está disponible.';
+
+  @override
   String get taskerSection => 'Tasker';
 
   @override

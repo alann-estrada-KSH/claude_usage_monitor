@@ -1496,6 +1496,78 @@ abstract class AppLocalizations {
   /// **'Shows account and refresh health only. Tokens, cookies and raw provider responses are never included.'**
   String get diagnosticsSafeDescription;
 
+  /// No description provided for @dashboardFilters.
+  ///
+  /// In en, this message translates to:
+  /// **'View'**
+  String get dashboardFilters;
+
+  /// No description provided for @dashboardFilterSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'{account} · {provider} · {period}'**
+  String dashboardFilterSummary(String account, String provider, String period);
+
+  /// No description provided for @clearDashboardFilters.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear filters'**
+  String get clearDashboardFilters;
+
+  /// No description provided for @filterAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get filterAccount;
+
+  /// No description provided for @filterProvider.
+  ///
+  /// In en, this message translates to:
+  /// **'Provider'**
+  String get filterProvider;
+
+  /// No description provided for @filterHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'History'**
+  String get filterHistory;
+
+  /// No description provided for @filterDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get filterDone;
+
+  /// No description provided for @wearSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Wear OS'**
+  String get wearSection;
+
+  /// No description provided for @wearDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'The watch receives sanitized usage data from this phone. Sessions and credentials stay on the phone.'**
+  String get wearDescription;
+
+  /// No description provided for @wearSyncButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Send current data to watch'**
+  String get wearSyncButton;
+
+  /// No description provided for @wearSyncSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Current data sent to watch.'**
+  String get wearSyncSent;
+
+  /// No description provided for @wearSyncUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch sync is not available right now.'**
+  String get wearSyncUnavailable;
+
   /// No description provided for @taskerSection.
   ///
   /// In en, this message translates to:

@@ -3,7 +3,9 @@
     <application
         android:allowBackup="false"
         android:theme="@style/Theme.UsageMonitorWear"
-        android:label="@string/app_name">
+        android:label="@string/app_name"
+        android:icon="@drawable/ic_usage_monitor_mark"
+        android:roundIcon="@drawable/ic_usage_monitor_mark">
         <activity
             android:name=".WearMainActivity"
             android:exported="true">

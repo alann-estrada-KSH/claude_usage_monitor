@@ -794,6 +794,49 @@ class AppLocalizationsEn extends AppLocalizations {
       'Shows account and refresh health only. Tokens, cookies and raw provider responses are never included.';
 
   @override
+  String get dashboardFilters => 'View';
+
+  @override
+  String dashboardFilterSummary(
+    String account,
+    String provider,
+    String period,
+  ) {
+    return '$account · $provider · $period';
+  }
+
+  @override
+  String get clearDashboardFilters => 'Clear filters';
+
+  @override
+  String get filterAccount => 'Account';
+
+  @override
+  String get filterProvider => 'Provider';
+
+  @override
+  String get filterHistory => 'History';
+
+  @override
+  String get filterDone => 'Done';
+
+  @override
+  String get wearSection => 'Wear OS';
+
+  @override
+  String get wearDescription =>
+      'The watch receives sanitized usage data from this phone. Sessions and credentials stay on the phone.';
+
+  @override
+  String get wearSyncButton => 'Send current data to watch';
+
+  @override
+  String get wearSyncSent => 'Current data sent to watch.';
+
+  @override
+  String get wearSyncUnavailable => 'Watch sync is not available right now.';
+
+  @override
   String get taskerSection => 'Tasker';
 
   @override

@@ -234,8 +234,21 @@
   "deleteAllDataBody": "Tendrás que volver a iniciar sesión. Esta acción no se puede deshacer.",
   "deleteAllDataDone": "Se borraron todos los datos de la app.",
   "deleteAllDataConfirm": "Borrar todo",
-  "diagnosticsSafeDescription": "Solo muestra el estado de cuentas y actualizaciones. Nunca incluye tokens, cookies ni respuestas sin procesar del proveedor."
-  ,"taskerSection": "Tasker",
+  "diagnosticsSafeDescription": "Solo muestra el estado de cuentas y actualizaciones. Nunca incluye tokens, cookies ni respuestas sin procesar del proveedor.",
+  "dashboardFilters": "Vista",
+  "dashboardFilterSummary": "{account} · {provider} · {period}",
+  "@dashboardFilterSummary": {"placeholders": {"account": {"type": "String"}, "provider": {"type": "String"}, "period": {"type": "String"}}},
+  "clearDashboardFilters": "Limpiar filtros",
+  "filterAccount": "Cuenta",
+  "filterProvider": "Proveedor",
+  "filterHistory": "Historial",
+  "filterDone": "Listo",
+  "wearSection": "Wear OS",
+  "wearDescription": "El reloj recibe datos de uso sanitizados desde este teléfono. Las sesiones y credenciales permanecen en el teléfono.",
+  "wearSyncButton": "Enviar datos actuales al reloj",
+  "wearSyncSent": "Datos actuales enviados al reloj.",
+  "wearSyncUnavailable": "La sincronización con el reloj no está disponible.",
+  "taskerSection": "Tasker",
   "taskerDescription": "Envía este broadcast desde Tasker para abrir la app y ejecutar una actualización con límite de frecuencia.",
   "taskerCopyAction": "Copiar acción broadcast"
 }

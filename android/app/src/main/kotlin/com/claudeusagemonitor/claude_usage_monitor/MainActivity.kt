@@ -1,10 +1,12 @@
 package com.claudeusagemonitor.claude_usage_monitor
 
+import android.content.Intent
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
+    private var watchChannel: MethodChannel? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -18,5 +20,17 @@ class MainActivity : FlutterActivity() {
                     result.notImplemented()
                 }
             }
+        watchChannel = MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            "claude_usage_monitor/watch",
+        )
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (intent.data?.scheme == "claudeusagemonitor" && intent.data?.host == "sync") {
+            watchChannel?.invokeMethod("refreshNow", null)
+        }
     }
 }

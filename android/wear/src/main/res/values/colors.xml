@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="watch_background">#0A0C0A</color>
+    <color name="watch_surface">#111411</color>
+    <color name="watch_border">#2E322E</color>
+    <color name="watch_text">#E6E6E1</color>
+    <color name="watch_muted">#8C938C</color>
+    <color name="watch_accent">#D97757</color>
+</resources>

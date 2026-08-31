@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:quick_actions/quick_actions.dart';
 import 'package:window_manager/window_manager.dart';
@@ -43,6 +44,7 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
+  static const _watchChannel = MethodChannel('claude_usage_monitor/watch');
   UsagePoller? _poller;
   late final AppTrayController _tray = AppTrayController(
     onRefreshNow: () => context.read<AccountProvider>().refreshAll(),
@@ -68,10 +70,16 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   void initState() {
     super.initState();
+    _watchChannel.setMethodCallHandler(_handleWatchCall);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) setState(() => _chromeReady = true);
       _bootstrap();
     });
+  }
+
+  Future<void> _handleWatchCall(MethodCall call) async {
+    if (call.method != 'refreshNow' || !mounted) return;
+    await context.read<AccountProvider>().refreshAll();
   }
 
   Future<void> _bootstrap() async {
@@ -187,6 +195,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
   @override
   void dispose() {
+    _watchChannel.setMethodCallHandler(null);
     _trayTooltipProvider?.removeListener(_updateTrayTooltip);
     _shortcutProvider?.removeListener(_syncQuickActions);
     _tray.dispose();
@@ -608,61 +617,171 @@ class _DashboardFilters extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final providers = accounts.map((account) => account.providerType).toSet();
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      children: [
-        SizedBox(
-          width: 190,
-          child: DropdownButtonFormField<String?>(
-            initialValue: accountId,
-            decoration: const InputDecoration(isDense: true),
-            items: [
-              DropdownMenuItem<String?>(
-                value: null,
-                child: Text(l10n.allAccountsFilter),
+    final accountLabel = accountId == null
+        ? l10n.allAccountsFilter
+        : accounts
+              .where((account) => account.id == accountId)
+              .map((account) => account.label)
+              .firstOrNull ?? l10n.allAccountsFilter;
+    final providerLabel = providerType?.displayName ?? l10n.allProvidersFilter;
+    final periodLabel = switch (historyDays) {
+      1 => l10n.history24Hours,
+      30 => l10n.history30Days,
+      _ => l10n.history7Days,
+    };
+    final hasFilters = accountId != null || providerType != null || historyDays != 7;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Row(
+          children: [
+            Icon(
+              Icons.tune,
+              size: 18,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                l10n.dashboardFilterSummary(
+                  accountLabel,
+                  providerLabel,
+                  periodLabel,
+                ),
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall,
               ),
-              ...accounts.map(
-                (account) => DropdownMenuItem<String?>(
-                  value: account.id,
-                  child: Text(account.label, overflow: TextOverflow.ellipsis),
+            ),
+            TextButton.icon(
+              onPressed: () => showModalBottomSheet<void>(
+                context: context,
+                showDragHandle: true,
+                builder: (_) => _DashboardFilterSheet(
+                  accounts: accounts,
+                  providers: providers,
+                  accountId: accountId,
+                  providerType: providerType,
+                  historyDays: historyDays,
+                  onAccountChanged: onAccountChanged,
+                  onProviderChanged: onProviderChanged,
+                  onHistoryChanged: onHistoryChanged,
                 ),
               ),
-            ],
-            onChanged: onAccountChanged,
-          ),
-        ),
-        SizedBox(
-          width: 190,
-          child: DropdownButtonFormField<AccountProviderType?>(
-            initialValue: providerType,
-            decoration: const InputDecoration(isDense: true),
-            items: [
-              DropdownMenuItem<AccountProviderType?>(
-                value: null,
-                child: Text(l10n.allProvidersFilter),
+              icon: const Icon(Icons.tune, size: 16),
+              label: Text(l10n.dashboardFilters),
+            ),
+            if (hasFilters)
+              IconButton(
+                icon: const Icon(Icons.close, size: 18),
+                tooltip: l10n.clearDashboardFilters,
+                onPressed: () {
+                  onAccountChanged(null);
+                  onProviderChanged(null);
+                  onHistoryChanged(7);
+                },
               ),
-              ...providers.map(
-                (provider) => DropdownMenuItem<AccountProviderType?>(
-                  value: provider,
-                  child: Text(provider.displayName),
-                ),
-              ),
-            ],
-            onChanged: onProviderChanged,
-          ),
-        ),
-        SegmentedButton<int>(
-          segments: [
-            ButtonSegment(value: 1, label: Text(l10n.history24Hours)),
-            ButtonSegment(value: 7, label: Text(l10n.history7Days)),
-            ButtonSegment(value: 30, label: Text(l10n.history30Days)),
           ],
-          selected: {historyDays},
-          onSelectionChanged: (selection) => onHistoryChanged(selection.first),
         ),
-      ],
+      ),
+    );
+  }
+}
+
+class _DashboardFilterSheet extends StatelessWidget {
+  const _DashboardFilterSheet({
+    required this.accounts,
+    required this.providers,
+    required this.accountId,
+    required this.providerType,
+    required this.historyDays,
+    required this.onAccountChanged,
+    required this.onProviderChanged,
+    required this.onHistoryChanged,
+  });
+
+  final List<ClaudeAccount> accounts;
+  final Set<AccountProviderType> providers;
+  final String? accountId;
+  final AccountProviderType? providerType;
+  final int historyDays;
+  final ValueChanged<String?> onAccountChanged;
+  final ValueChanged<AccountProviderType?> onProviderChanged;
+  final ValueChanged<int> onHistoryChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(l10n.filterAccount, style: Theme.of(context).textTheme.titleSmall),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                ChoiceChip(
+                  label: Text(l10n.allAccountsFilter),
+                  selected: accountId == null,
+                  onSelected: (_) => onAccountChanged(null),
+                ),
+                ...accounts.map(
+                  (account) => ChoiceChip(
+                    label: Text(account.label, overflow: TextOverflow.ellipsis),
+                    selected: account.id == accountId,
+                    onSelected: (_) => onAccountChanged(account.id),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text(l10n.filterProvider, style: Theme.of(context).textTheme.titleSmall),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: [
+                ChoiceChip(
+                  label: Text(l10n.allProvidersFilter),
+                  selected: providerType == null,
+                  onSelected: (_) => onProviderChanged(null),
+                ),
+                ...providers.map(
+                  (provider) => ChoiceChip(
+                    label: Text(provider.displayName),
+                    selected: provider == providerType,
+                    onSelected: (_) => onProviderChanged(provider),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text(l10n.filterHistory, style: Theme.of(context).textTheme.titleSmall),
+            const SizedBox(height: 8),
+            SegmentedButton<int>(
+              segments: [
+                ButtonSegment(value: 1, label: Text(l10n.history24Hours)),
+                ButtonSegment(value: 7, label: Text(l10n.history7Days)),
+                ButtonSegment(value: 30, label: Text(l10n.history30Days)),
+              ],
+              selected: {historyDays},
+              onSelectionChanged: (selection) => onHistoryChanged(selection.first),
+            ),
+            const SizedBox(height: 20),
+            Align(
+              alignment: Alignment.centerRight,
+              child: FilledButton.icon(
+                onPressed: () => Navigator.of(context).pop(),
+                icon: const Icon(Icons.check),
+                label: Text(l10n.filterDone),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

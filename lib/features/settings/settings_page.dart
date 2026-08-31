@@ -1,5 +1,6 @@
 import 'dart:io' show Platform;
 
+import 'package:android_surface_bridge/android_surface_bridge.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
@@ -53,8 +54,8 @@ class SettingsPage extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             _SectionCard(
-              title: l10n.taskerSection,
-              child: const _TaskerControl(),
+              title: l10n.wearSection,
+              child: const _WearLinkControl(),
             ),
             const SizedBox(height: 16),
           ],
@@ -784,11 +785,8 @@ class _PinnedNotificationControl extends StatelessWidget {
   }
 }
 
-class _TaskerControl extends StatelessWidget {
-  const _TaskerControl();
-
-  static const _action =
-      'com.claudeusagemonitor.claude_usage_monitor.TASKER_REFRESH';
+class _WearLinkControl extends StatelessWidget {
+  const _WearLinkControl();
 
   @override
   Widget build(BuildContext context) {
@@ -796,18 +794,30 @@ class _TaskerControl extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(l10n.taskerDescription),
-        const SizedBox(height: 8),
-        SelectableText(
-          _action,
-          style: const TextStyle(fontFamily: 'monospace'),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.watch_outlined),
+          title: Text(l10n.wearSection),
+          subtitle: Text(l10n.wearDescription),
         ),
         const SizedBox(height: 8),
         OutlinedButton.icon(
-          onPressed: () =>
-              Clipboard.setData(const ClipboardData(text: _action)),
-          icon: const Icon(Icons.copy),
-          label: Text(l10n.taskerCopyAction),
+          onPressed: () async {
+            try {
+              await AndroidSurfaceBridge.requestUpdate();
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(l10n.wearSyncSent)),
+              );
+            } catch (_) {
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(l10n.wearSyncUnavailable)),
+              );
+            }
+          },
+          icon: const Icon(Icons.sync),
+          label: Text(l10n.wearSyncButton),
         ),
       ],
     );

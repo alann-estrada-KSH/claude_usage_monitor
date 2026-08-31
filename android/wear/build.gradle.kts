@@ -31,8 +31,8 @@ android {
         // +10000 offset from the phone's build number keeps this and the
         // phone's versionCode permanently out of each other's way; bump it
         // in lockstep with pubspec.yaml's build number (phone + 10000).
-        versionCode = 10026
-        versionName = "1.4.9"
+        versionCode = 10027
+        versionName = "1.4.10"
     }
 
     compileOptions {
@@ -70,6 +70,7 @@ kotlin {
 
 dependencies {
     implementation("androidx.wear:wear:1.3.0")
+    implementation("androidx.wear:wear-remote-interactions:1.0.0")
     implementation("androidx.wear.watchface:watchface-complications-data-source:1.3.0")
     implementation("com.google.android.gms:play-services-wearable:19.0.0")
 }

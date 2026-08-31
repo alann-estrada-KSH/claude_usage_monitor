@@ -191,9 +191,10 @@ class AccountProvider extends ChangeNotifier {
     _updateAccount(accountId, (_) => updated);
     await _persist(accountId);
     final settings = _loadSettings();
-    await _alerts.checkProviderAvailability(
+    await _alerts.checkAccountAvailability(
       account: updated,
       privacyMode: settings.pinnedNotificationPrivacyMode,
+      languageCode: settings.languageCode,
     );
     if (snapshot.isAvailable) {
       final account = _accounts.firstWhere((a) => a.id == accountId);

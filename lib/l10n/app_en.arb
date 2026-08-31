@@ -332,8 +332,21 @@
   "deleteAllDataBody": "You will need to sign in again. This cannot be undone.",
   "deleteAllDataDone": "All app data was deleted.",
   "deleteAllDataConfirm": "Delete everything",
-  "diagnosticsSafeDescription": "Shows account and refresh health only. Tokens, cookies and raw provider responses are never included."
-  ,"taskerSection": "Tasker",
+  "diagnosticsSafeDescription": "Shows account and refresh health only. Tokens, cookies and raw provider responses are never included.",
+  "dashboardFilters": "View",
+  "dashboardFilterSummary": "{account} · {provider} · {period}",
+  "@dashboardFilterSummary": {"placeholders": {"account": {"type": "String"}, "provider": {"type": "String"}, "period": {"type": "String"}}},
+  "clearDashboardFilters": "Clear filters",
+  "filterAccount": "Account",
+  "filterProvider": "Provider",
+  "filterHistory": "History",
+  "filterDone": "Done",
+  "wearSection": "Wear OS",
+  "wearDescription": "The watch receives sanitized usage data from this phone. Sessions and credentials stay on the phone.",
+  "wearSyncButton": "Send current data to watch",
+  "wearSyncSent": "Current data sent to watch.",
+  "wearSyncUnavailable": "Watch sync is not available right now.",
+  "taskerSection": "Tasker",
   "taskerDescription": "Send this broadcast from Tasker to open the app and run a rate-limited refresh.",
   "taskerCopyAction": "Copy broadcast action"
 }

@@ -63,28 +63,47 @@ class UsageAlertService {
     );
   }
 
-  Future<void> checkProviderAvailability({
+  static ({String title, String body}) buildAccountFailureNotification({
+    required String accountLabel,
+    required String providerLabel,
+    String languageCode = '',
+    String privacyMode = 'full',
+  }) {
+    final lang = languageCode.isNotEmpty
+        ? languageCode
+        : PlatformDispatcher.instance.locale.languageCode;
+    final spanish = lang == 'es';
+    final subject = privacyMode == 'hidden'
+        ? (spanish ? 'La cuenta' : 'The account')
+        : privacyMode == 'hideAccounts'
+        ? (spanish ? 'La cuenta' : 'The account')
+        : '$accountLabel ($providerLabel)';
+    return (
+      title: spanish
+          ? 'No se pudo actualizar la cuenta'
+          : 'Account refresh failed',
+      body: spanish
+          ? '$subject no respondió después de varios intentos. Los datos mostrados pueden estar desactualizados.'
+          : '$subject did not respond after several attempts. Displayed data may be stale.',
+    );
+  }
+
+  Future<void> checkAccountAvailability({
     required ClaudeAccount account,
     String privacyMode = 'full',
+    String? languageCode,
   }) async {
-    final key = '${account.providerType.name}:provider_unavailable';
+    final key = '${account.id}:account_unavailable';
     if (account.consecutiveFailures >= 2) {
       if (_log.hasFired(key)) return;
       await _log.markFired(key);
-      final lang = PlatformDispatcher.instance.locale.languageCode == 'es'
-          ? 'es'
-          : 'en';
-      final provider = privacyMode == 'hidden'
-          ? (lang == 'es' ? 'El proveedor' : 'The provider')
-          : account.providerType.displayName;
-      await _notifications.show(
-        title: lang == 'es'
-            ? 'Proveedor no disponible'
-            : 'Provider unavailable',
-        body: lang == 'es'
-            ? '$provider no responde después de varios intentos.'
-            : '$provider has not responded after several attempts.',
+      final message = buildAccountFailureNotification(
+        accountLabel: account.label,
+        providerLabel: account.providerType.displayName,
+        languageCode: languageCode ?? '',
+        privacyMode: privacyMode,
       );
+      await _notifications.show(title: message.title, body: message.body);
       return;
     }
     await _log.clear(key);

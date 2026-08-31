@@ -7,6 +7,19 @@ tagged release. Format loosely follows [Keep a Changelog](https://keepachangelog
 
 No changes yet.
 
+## [1.4.10] - 2026-08-31
+
+- feat: improve Wear OS layout with the app logo, square surfaces, safe-area
+  insets for round and rectangular screens, scrolling, usage bars, and direct
+  phone open/sync
+- feat: make dashboard filters compact and organic while retaining account,
+  provider, and history-window selection
+- feat: add configurable Android notification privacy, selected accounts,
+  provider and usage fields, manual re-login, stale-data indicators, and
+  account-specific refresh alerts
+- test: add provider alert coverage and keep parser fixtures, retry backoff,
+  and background cache behavior covered
+
 ## [1.4.9] - 2026-08-31
 
 - fix: bundle native (.so) debug symbols into the phone `.aab`
