@@ -1,20 +1,20 @@
 Architectures: amd64
 Codename: stable
 Components: main
-Date: Mon, 31 Aug 2026 05:15:53 +0000
+Date: Mon, 31 Aug 2026 05:44:53 +0000
 Description: Unofficial Claude Usage Monitor apt repo (unsigned, [trusted=yes])
 Label: Claude Usage Monitor
 Origin: Claude Usage Monitor
 Suite: stable
 MD5Sum:
- b3c764c406b21b5a14564bf0b1efaf27              643 main/binary-amd64/Packages
- 0b74099e5dc759696e6c799d228039ea              464 main/binary-amd64/Packages.gz
+ 5868d89b4c2ccc084d08c27bcb606c78              643 main/binary-amd64/Packages
+ ee60001edbf344daffd384dfa057e87f              465 main/binary-amd64/Packages.gz
 SHA1:
- 6e34228f350bde9569ae9c3fc245d32a1d71f4fe              643 main/binary-amd64/Packages
- 4791bd99a24ea94628e7ff8c7635fc3050408686              464 main/binary-amd64/Packages.gz
+ 6d407bcce32924c7148a397b23b2bd3b034c08aa              643 main/binary-amd64/Packages
+ 587ace6c2d11ae101f7d0a133acd3b24832996c4              465 main/binary-amd64/Packages.gz
 SHA256:
- 7ef02643b0843a00631b7bbdcd36e95212a313cb66618fa27cc35a8c6e0338b5              643 main/binary-amd64/Packages
- 9e23907b3a6cd9a10c4e1a8b8e23959470eba78e6a4941574f6985c3a9b06561              464 main/binary-amd64/Packages.gz
+ 26d0b13ad41c39463acce0ee761fa564843bd1dc77e8327616fc8e07cf04f051              643 main/binary-amd64/Packages
+ fa0c0c11f7b08fd89da4dda18eb8cde0a7a34158506fc68b975a91a13fdc0cbf              465 main/binary-amd64/Packages.gz
 SHA512:
- 2c17100cc19d691d962f8bc33ca84ffba64b30ceb7473639a61a125cdb821b8870956bd195f91a2e9f8966cb55e640b0c5d5582e8c332e28e828810799dc8d20              643 main/binary-amd64/Packages
- d19bdc94627943b43b14fdf1ddf3963b76e41c55a6f314111a7269b767938638426f7f21d0aa027d257577acdef2234da945dc2417eed2f44b74dcdeb2cb2113              464 main/binary-amd64/Packages.gz
+ 855913d953e125d1d75320b5ad91352c9a8027d9f09446f3e6c2a9e82b8427a5b5554cf475e8fff9457e2c4c2f6657b4732c04690f71f84fc4fcb863c864d1d1              643 main/binary-amd64/Packages
+ 5946622756a7b3d427619ea5c9913be178f11bf1bdbb8b3cbe0c5d9e2dfabe1c04e31413065e1d64e8f028839a5b501929f74d23f285f643290248cc47e7086a              465 main/binary-amd64/Packages.gz
