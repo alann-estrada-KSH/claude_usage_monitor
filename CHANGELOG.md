@@ -7,6 +7,13 @@ tagged release. Format loosely follows [Keep a Changelog](https://keepachangelog
 
 No changes yet.
 
+## [1.4.11] - 2026-08-31
+
+- fix: publish phone and Wear OS bundles to their dedicated Google Play
+  tracks instead of committing the watch bundle to the mobile track
+- ci: use the current `tracks` input for Play uploads and retain the signed
+  Wear bundle as a private draft release when its upload fails
+
 ## [1.4.10] - 2026-08-31
 
 - feat: improve Wear OS layout with the app logo, square surfaces, safe-area
