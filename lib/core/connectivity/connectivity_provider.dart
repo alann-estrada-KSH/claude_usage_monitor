@@ -8,7 +8,8 @@ import 'package:flutter/foundation.dart';
 /// automatic refreshes and show a banner instead of letting every poll
 /// tick hit a SocketException while offline).
 class ConnectivityProvider extends ChangeNotifier {
-  ConnectivityProvider({Connectivity? connectivity}) : _connectivity = connectivity ?? Connectivity();
+  ConnectivityProvider({Connectivity? connectivity})
+    : _connectivity = connectivity ?? Connectivity();
 
   final Connectivity _connectivity;
   StreamSubscription<List<ConnectivityResult>>? _subscription;

@@ -18,7 +18,8 @@ class ClaudeStatus {
 
   bool get isOperational => indicator == 'none';
 
-  factory ClaudeStatus.unavailable(String error, {DateTime? fetchedAt}) => ClaudeStatus(
+  factory ClaudeStatus.unavailable(String error, {DateTime? fetchedAt}) =>
+      ClaudeStatus(
         indicator: 'unknown',
         description: 'Unknown',
         fetchedAt: fetchedAt ?? DateTime.now(),

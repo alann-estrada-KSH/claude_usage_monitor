@@ -44,6 +44,15 @@ class SettingsProvider extends ChangeNotifier {
       _settings.pinnedNotificationAllAccounts;
   List<String> get pinnedNotificationAccountIds =>
       List.unmodifiable(_settings.pinnedNotificationAccountIds);
+  bool get pinnedNotificationEnabled => _settings.pinnedNotificationEnabled;
+  bool get pinnedNotificationShowProvider =>
+      _settings.pinnedNotificationShowProvider;
+  bool get pinnedNotificationShowFiveHour =>
+      _settings.pinnedNotificationShowFiveHour;
+  bool get pinnedNotificationShowWeekly =>
+      _settings.pinnedNotificationShowWeekly;
+  String get pinnedNotificationPrivacyMode =>
+      _settings.pinnedNotificationPrivacyMode;
   bool get widgetAllAccounts => _settings.widgetAllAccounts;
   List<String> get widgetAccountIds =>
       List.unmodifiable(_settings.widgetAccountIds);
@@ -204,6 +213,28 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> setPinnedNotificationDisplay({
+    bool? enabled,
+    bool? showProvider,
+    bool? showFiveHour,
+    bool? showWeekly,
+    String? privacyMode,
+  }) async {
+    if (privacyMode != null &&
+        !AppSettings.notificationPrivacyModes.contains(privacyMode)) {
+      return;
+    }
+    _settings = _settings.copyWith(
+      pinnedNotificationEnabled: enabled,
+      pinnedNotificationShowProvider: showProvider,
+      pinnedNotificationShowFiveHour: showFiveHour,
+      pinnedNotificationShowWeekly: showWeekly,
+      pinnedNotificationPrivacyMode: privacyMode,
+    );
+    await _store.save(_settings);
+    notifyListeners();
+  }
+
   Future<void> setWidgetAccounts({
     required bool allAccounts,
     required List<String> accountIds,
@@ -276,6 +307,15 @@ class SettingsProvider extends ChangeNotifier {
     await _store.save(_settings);
     await SessionKeepAlive.cancel();
     await LocalApiService.instance.apply();
+    notifyListeners();
+  }
+
+  Future<void> clearAllData() async {
+    _settings = const AppSettings();
+    await _store.clear();
+    await SessionKeepAlive.cancel();
+    await LocalApiService.instance.stop();
+    LocalApiService.instance.forgetSecret();
     notifyListeners();
   }
 }

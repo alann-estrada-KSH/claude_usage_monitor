@@ -1,0 +1,7 @@
+{
+  "quotas": {
+    "chatQuota": {"percentRemaining": 60},
+    "completionsQuota": {"percentRemaining": 75},
+    "resetDateUtc": "2026-09-01T00:00:00Z"
+  }
+}

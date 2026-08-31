@@ -9,9 +9,8 @@ plugins {
 
 // android/key.properties is gitignored (see android/.gitignore) -- it points
 // at a real upload keystore that lives outside the repo entirely
-// (~/keystores/, never committed). Falls back to the debug key when absent
-// (e.g. a fresh checkout on another machine) so `flutter run`/`build` still
-// work without it; only a real Play Store upload needs it present.
+// (~/keystores/, never committed). Debug builds remain usable without it;
+// release builds never fall back to the debug key.
 val keystorePropertiesFile = rootProject.file("key.properties")
 val keystoreProperties = Properties()
 val hasKeystoreProperties = keystorePropertiesFile.exists()
@@ -45,6 +44,7 @@ android {
 
     dependencies {
         coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+        implementation("com.google.android.gms:play-services-wearable:19.0.0")
     }
 
     signingConfigs {
@@ -63,7 +63,7 @@ android {
             signingConfig = if (hasKeystoreProperties) {
                 signingConfigs.getByName("release")
             } else {
-                signingConfigs.getByName("debug")
+                null
             }
         }
     }

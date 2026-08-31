@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Usage Monitor</string>
+    <string name="no_phone_data">Open the phone app to sync data.</string>
+    <string name="watch_title">Usage Monitor</string>
+    <string name="complication_choose_account">Complication account</string>
+    <string name="complication_save">Save</string>
+</resources>

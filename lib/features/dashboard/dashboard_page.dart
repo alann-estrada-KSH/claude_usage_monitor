@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
@@ -11,6 +12,8 @@ import '../../core/models/app_settings.dart';
 import '../../core/models/claude_account.dart';
 import '../../core/models/provider_type.dart';
 import '../../core/models/usage_snapshot.dart';
+import '../../core/models/usage_history_point.dart';
+import '../../core/models/usage_history_window.dart';
 import '../../core/polling/usage_poller.dart';
 import '../../core/status/claude_status_provider.dart';
 import '../../core/tray/app_tray_controller.dart';
@@ -26,8 +29,11 @@ import 'offline_banner.dart';
 import 'sparkline.dart';
 import 'status_banner.dart';
 import 'usage_bar.dart';
+import 'usage_history_chart.dart';
 
 enum _DashboardMenuAction { addAccount, settings }
+
+enum _AccountAction { rename, relogin, limits, remove }
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -54,6 +60,10 @@ class _DashboardPageState extends State<DashboardPage> {
   bool _floatingMode = false;
   Size? _sizeBeforeFloating;
   bool? _alwaysOnTopBeforeFloating;
+  AccountProviderType? _providerFilter;
+  String? _accountFilter;
+  int _historyDays = 7;
+  AccountProvider? _shortcutProvider;
 
   @override
   void initState() {
@@ -75,21 +85,23 @@ class _DashboardPageState extends State<DashboardPage> {
     connectivity.onReconnected = () => provider.refreshAll();
 
     if (Platform.isAndroid || Platform.isIOS) {
-      const QuickActions quickActions = QuickActions();
+      const quickActions = QuickActions();
       quickActions.initialize((type) {
         if (type == 'refresh_now' && mounted) {
           context.read<AccountProvider>().refreshAll();
+        } else if (type.startsWith('account_') && mounted) {
+          setState(() => _accountFilter = type.substring('account_'.length));
+          context.read<AccountProvider>().refreshUsage(_accountFilter!);
         }
       });
-      quickActions.setShortcutItems([
-        ShortcutItem(
-          type: 'refresh_now',
-          localizedTitle: l10n.refreshNowTooltip,
-        ),
-      ]);
     }
 
     await provider.init();
+    if (Platform.isAndroid || Platform.isIOS) {
+      _shortcutProvider = provider;
+      provider.addListener(_syncQuickActions);
+      await _syncQuickActions();
+    }
     await settings.init();
     if (settings.floatingModeEnabled) {
       await windowManager.setAsFrameless();
@@ -128,6 +140,25 @@ class _DashboardPageState extends State<DashboardPage> {
     _updateTrayTooltip();
   }
 
+  Future<void> _syncQuickActions() async {
+    if (!Platform.isAndroid && !Platform.isIOS) return;
+    final l10n = AppLocalizations.of(context);
+    final provider = _shortcutProvider;
+    if (l10n == null || provider == null) return;
+    final actions = <ShortcutItem>[
+      ShortcutItem(type: 'refresh_now', localizedTitle: l10n.refreshNowTooltip),
+      ...provider.accounts
+          .take(3)
+          .map(
+            (account) => ShortcutItem(
+              type: 'account_${account.id}',
+              localizedTitle: '${l10n.refreshNowTooltip}: ${account.label}',
+            ),
+          ),
+    ];
+    await const QuickActions().setShortcutItems(actions);
+  }
+
   // Hovering the tray icon previously always showed the same static app
   // name -- rebuild the tooltip from current usage every time accounts
   // change (refresh, add, remove) so the limits are visible without
@@ -157,6 +188,7 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   void dispose() {
     _trayTooltipProvider?.removeListener(_updateTrayTooltip);
+    _shortcutProvider?.removeListener(_syncQuickActions);
     _tray.dispose();
     _poller?.dispose();
     super.dispose();
@@ -441,22 +473,56 @@ class _DashboardPageState extends State<DashboardPage> {
                 if (provider.accounts.isEmpty) {
                   return _EmptyState(onAddAccount: _addAccount);
                 }
+                final filtered = provider.accounts.where((account) {
+                  final providerMatches =
+                      _providerFilter == null ||
+                      account.providerType == _providerFilter;
+                  final accountMatches =
+                      _accountFilter == null || account.id == _accountFilter;
+                  return providerMatches && accountMatches;
+                }).toList();
                 return RefreshIndicator(
                   onRefresh: provider.refreshAll,
-                  child: ListView.separated(
+                  child: ListView(
                     padding: const EdgeInsets.all(16),
-                    itemCount: provider.accounts.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 12),
-                    itemBuilder: (context, index) {
-                      final account = provider.accounts[index];
-                      return _AccountCard(
-                        account: account,
-                        onRefresh: () => provider.refreshUsage(account.id),
-                        onRemove: () => provider.removeAccount(account.id),
-                        onRename: (label) =>
-                            provider.renameAccount(account.id, label),
-                      );
-                    },
+                    children: [
+                      _DashboardFilters(
+                        accounts: provider.accounts,
+                        accountId: _accountFilter,
+                        providerType: _providerFilter,
+                        historyDays: _historyDays,
+                        onAccountChanged: (value) =>
+                            setState(() => _accountFilter = value),
+                        onProviderChanged: (value) =>
+                            setState(() => _providerFilter = value),
+                        onHistoryChanged: (value) =>
+                            setState(() => _historyDays = value),
+                      ),
+                      const SizedBox(height: 12),
+                      _ProviderOverview(accounts: filtered),
+                      const SizedBox(height: 12),
+                      if (filtered.isEmpty)
+                        Center(child: Text(l10n.allAccountsFilter))
+                      else
+                        ...filtered.map(
+                          (account) => Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: _AccountCard(
+                              account: account,
+                              history: filterHistory(
+                                provider.historyFor(account.id),
+                                days: _historyDays,
+                              ),
+                              onRefresh: () =>
+                                  provider.refreshUsage(account.id),
+                              onRemove: () =>
+                                  provider.removeAccount(account.id),
+                              onRename: (label) =>
+                                  provider.renameAccount(account.id, label),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 );
               },
@@ -514,6 +580,187 @@ class _EmptyState extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _DashboardFilters extends StatelessWidget {
+  const _DashboardFilters({
+    required this.accounts,
+    required this.accountId,
+    required this.providerType,
+    required this.historyDays,
+    required this.onAccountChanged,
+    required this.onProviderChanged,
+    required this.onHistoryChanged,
+  });
+
+  final List<ClaudeAccount> accounts;
+  final String? accountId;
+  final AccountProviderType? providerType;
+  final int historyDays;
+  final ValueChanged<String?> onAccountChanged;
+  final ValueChanged<AccountProviderType?> onProviderChanged;
+  final ValueChanged<int> onHistoryChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final providers = accounts.map((account) => account.providerType).toSet();
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        SizedBox(
+          width: 190,
+          child: DropdownButtonFormField<String?>(
+            initialValue: accountId,
+            decoration: const InputDecoration(isDense: true),
+            items: [
+              DropdownMenuItem<String?>(
+                value: null,
+                child: Text(l10n.allAccountsFilter),
+              ),
+              ...accounts.map(
+                (account) => DropdownMenuItem<String?>(
+                  value: account.id,
+                  child: Text(account.label, overflow: TextOverflow.ellipsis),
+                ),
+              ),
+            ],
+            onChanged: onAccountChanged,
+          ),
+        ),
+        SizedBox(
+          width: 190,
+          child: DropdownButtonFormField<AccountProviderType?>(
+            initialValue: providerType,
+            decoration: const InputDecoration(isDense: true),
+            items: [
+              DropdownMenuItem<AccountProviderType?>(
+                value: null,
+                child: Text(l10n.allProvidersFilter),
+              ),
+              ...providers.map(
+                (provider) => DropdownMenuItem<AccountProviderType?>(
+                  value: provider,
+                  child: Text(provider.displayName),
+                ),
+              ),
+            ],
+            onChanged: onProviderChanged,
+          ),
+        ),
+        SegmentedButton<int>(
+          segments: [
+            ButtonSegment(value: 1, label: Text(l10n.history24Hours)),
+            ButtonSegment(value: 7, label: Text(l10n.history7Days)),
+            ButtonSegment(value: 30, label: Text(l10n.history30Days)),
+          ],
+          selected: {historyDays},
+          onSelectionChanged: (selection) => onHistoryChanged(selection.first),
+        ),
+      ],
+    );
+  }
+}
+
+class _ProviderOverview extends StatelessWidget {
+  const _ProviderOverview({required this.accounts});
+
+  final List<ClaudeAccount> accounts;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final settings = context.watch<SettingsProvider>();
+    final grouped = <AccountProviderType, List<ClaudeAccount>>{};
+    for (final account in accounts) {
+      grouped.putIfAbsent(account.providerType, () => []).add(account);
+    }
+    if (grouped.isEmpty) return const SizedBox.shrink();
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l10n.providerOverview,
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            const SizedBox(height: 8),
+            for (final entry in grouped.entries)
+              _ProviderOverviewRow(
+                provider: entry.key,
+                accounts: entry.value,
+                staleAfter: Duration(
+                  seconds: (settings.refreshIntervalSeconds * 3).clamp(
+                    300,
+                    1800,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ProviderOverviewRow extends StatelessWidget {
+  const _ProviderOverviewRow({
+    required this.provider,
+    required this.accounts,
+    required this.staleAfter,
+  });
+
+  final AccountProviderType provider;
+  final List<ClaudeAccount> accounts;
+  final Duration staleAfter;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final now = DateTime.now();
+    final stale = accounts.any(
+      (account) =>
+          account.lastFetchedAt == null ||
+          now.difference(account.lastFetchedAt!) > staleAfter,
+    );
+    final problem = accounts.any(
+      (account) =>
+          account.lastFetchSessionExpired || account.lastFetchError != null,
+    );
+    final values = accounts
+        .map((account) => account.lastKnownUsage?.fiveHourPercent)
+        .whereType<double>()
+        .toList();
+    final average = values.isEmpty
+        ? null
+        : values.reduce((a, b) => a + b) / values.length;
+    final status = problem
+        ? l10n.providerProblem
+        : stale
+        ? l10n.providerStale
+        : average == null
+        ? l10n.providerNoData
+        : l10n.providerHealthy;
+    final color = problem
+        ? Theme.of(context).colorScheme.error
+        : stale
+        ? Colors.amber.shade800
+        : Theme.of(context).colorScheme.primary;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        children: [
+          Expanded(child: Text(provider.displayName)),
+          if (average != null) Text('5 h ${average.round()}%  ·  '),
+          Text(status, style: TextStyle(color: color, fontSize: 12)),
+        ],
       ),
     );
   }
@@ -1066,12 +1313,14 @@ enum _Severity { ok, warning, critical, unknown }
 class _AccountCard extends StatelessWidget {
   const _AccountCard({
     required this.account,
+    required this.history,
     required this.onRefresh,
     required this.onRemove,
     required this.onRename,
   });
 
   final ClaudeAccount account;
+  final List<UsageHistoryPoint> history;
   final VoidCallback onRefresh;
   final VoidCallback onRemove;
   final ValueChanged<String> onRename;
@@ -1084,8 +1333,15 @@ class _AccountCard extends StatelessWidget {
       usage.weeklyPercent,
     ].whereType<double>().fold<double>(0, (a, b) => a > b ? a : b);
     final settings = context.watch<SettingsProvider>();
-    if (worst >= settings.criticalThresholdPercent) return _Severity.critical;
-    if (worst >= settings.warningThresholdPercent) return _Severity.warning;
+    if (worst >=
+        (account.criticalThresholdPercent ??
+            settings.criticalThresholdPercent)) {
+      return _Severity.critical;
+    }
+    if (worst >=
+        (account.warningThresholdPercent ?? settings.warningThresholdPercent)) {
+      return _Severity.warning;
+    }
     return _Severity.ok;
   }
 
@@ -1105,6 +1361,15 @@ class _AccountCard extends StatelessWidget {
     final usage = account.lastKnownUsage;
     final accent = _severityColor(context);
     final debugMode = context.watch<SettingsProvider>().debugMode;
+    final settings = context.watch<SettingsProvider>();
+    final stale =
+        account.lastFetchedAt == null ||
+        DateTime.now().difference(account.lastFetchedAt!) >
+            Duration(
+              seconds: (settings.refreshIntervalSeconds * 3)
+                  .clamp(300, 1800)
+                  .toInt(),
+            );
 
     final providerIcon = switch (account.providerType) {
       AccountProviderType.claude => Icons.chat_bubble_outline,
@@ -1174,22 +1439,69 @@ class _AccountCard extends StatelessWidget {
                             ],
                           ),
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.edit_outlined, size: 20),
-                          tooltip: l10n.renameAccountTooltip,
-                          onPressed: () => _rename(context, l10n),
-                        ),
+                        if (stale)
+                          Tooltip(
+                            message: l10n.providerStale,
+                            child: Icon(
+                              Icons.schedule,
+                              size: 17,
+                              color: Theme.of(context).colorScheme.error,
+                            ),
+                          ),
                         const SizedBox(width: 8),
+                        PopupMenuButton<_AccountAction>(
+                          tooltip: l10n.settingsTooltip,
+                          onSelected: (action) {
+                            switch (action) {
+                              case _AccountAction.rename:
+                                _rename(context, l10n);
+                              case _AccountAction.relogin:
+                                _reconnect(context);
+                              case _AccountAction.limits:
+                                _configureLimits(context);
+                              case _AccountAction.remove:
+                                _confirmRemove(context, l10n);
+                            }
+                          },
+                          itemBuilder: (context) => [
+                            PopupMenuItem(
+                              value: _AccountAction.relogin,
+                              child: ListTile(
+                                contentPadding: EdgeInsets.zero,
+                                leading: const Icon(Icons.login),
+                                title: Text(l10n.manualReloginTooltip),
+                              ),
+                            ),
+                            PopupMenuItem(
+                              value: _AccountAction.limits,
+                              child: ListTile(
+                                contentPadding: EdgeInsets.zero,
+                                leading: const Icon(Icons.tune),
+                                title: Text(l10n.customLimitsTooltip),
+                              ),
+                            ),
+                            PopupMenuItem(
+                              value: _AccountAction.rename,
+                              child: ListTile(
+                                contentPadding: EdgeInsets.zero,
+                                leading: const Icon(Icons.edit_outlined),
+                                title: Text(l10n.renameAccountTooltip),
+                              ),
+                            ),
+                            PopupMenuItem(
+                              value: _AccountAction.remove,
+                              child: ListTile(
+                                contentPadding: EdgeInsets.zero,
+                                leading: const Icon(Icons.delete_outline),
+                                title: Text(l10n.removeAccountTooltip),
+                              ),
+                            ),
+                          ],
+                        ),
                         IconButton(
                           icon: const Icon(Icons.refresh, size: 20),
                           tooltip: l10n.refreshNowTooltip,
                           onPressed: onRefresh,
-                        ),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          icon: const Icon(Icons.delete_outline, size: 20),
-                          tooltip: l10n.removeAccountTooltip,
-                          onPressed: () => _confirmRemove(context, l10n),
                         ),
                       ],
                     ),
@@ -1293,6 +1605,10 @@ class _AccountCard extends StatelessWidget {
                     ] else ...[
                       const SizedBox(height: 8),
                       _buildUsageBars(context, l10n, usage),
+                    ],
+                    if (history.length > 1) ...[
+                      const SizedBox(height: 10),
+                      UsageHistoryChart(points: history),
                     ],
                     if (account.lastFetchedAt != null) ...[
                       const SizedBox(height: 10),
@@ -1476,6 +1792,105 @@ class _AccountCard extends StatelessWidget {
     );
   }
 
+  Future<void> _configureLimits(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
+    final settings = context.read<SettingsProvider>();
+    final warning = TextEditingController(
+      text:
+          (account.warningThresholdPercent ?? settings.warningThresholdPercent)
+              .toString(),
+    );
+    final critical = TextEditingController(
+      text:
+          (account.criticalThresholdPercent ??
+                  settings.criticalThresholdPercent)
+              .toString(),
+    );
+    var useDefaults =
+        account.warningThresholdPercent == null ||
+        account.criticalThresholdPercent == null;
+    final result = await showDialog<(bool, int?, int?)>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setState) {
+          final warningValue = int.tryParse(warning.text);
+          final criticalValue = int.tryParse(critical.text);
+          final valid =
+              useDefaults ||
+              (warningValue != null &&
+                  criticalValue != null &&
+                  warningValue >= 1 &&
+                  warningValue < criticalValue &&
+                  criticalValue <= 100);
+          return AlertDialog(
+            title: Text(l10n.customLimitsTitle(account.label)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CheckboxListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(l10n.customLimitsUseDefaults),
+                  value: useDefaults,
+                  onChanged: (value) =>
+                      setState(() => useDefaults = value ?? true),
+                ),
+                TextField(
+                  controller: warning,
+                  enabled: !useDefaults,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: l10n.thresholdWarning(0),
+                  ),
+                  onChanged: (_) => setState(() {}),
+                ),
+                TextField(
+                  controller: critical,
+                  enabled: !useDefaults,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: l10n.thresholdCritical(0),
+                  ),
+                  onChanged: (_) => setState(() {}),
+                ),
+                if (!valid)
+                  Text(
+                    l10n.thresholdsSection,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: Text(l10n.cancel),
+              ),
+              FilledButton(
+                onPressed: valid
+                    ? () => Navigator.pop(dialogContext, (
+                        useDefaults,
+                        useDefaults ? null : warningValue,
+                        useDefaults ? null : criticalValue,
+                      ))
+                    : null,
+                child: Text(l10n.save),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+    warning.dispose();
+    critical.dispose();
+    if (result == null || !context.mounted) return;
+    await context.read<AccountProvider>().setAccountThresholds(
+      account.id,
+      warning: result.$2,
+      critical: result.$3,
+    );
+  }
+
   Future<void> _confirmRemove(
     BuildContext context,
     AppLocalizations l10n,
@@ -1516,18 +1931,6 @@ class _AccountCard extends StatelessWidget {
   }
 
   Future<void> _reconnect(BuildContext context) async {
-    if (account.providerType == AccountProviderType.antigravity) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Antigravity obtiene las métricas automáticamente de la cuenta activa en el sistema (localhost/CLI).',
-          ),
-        ),
-      );
-      onRefresh();
-      return;
-    }
-
     final loggedIn = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
         builder: (_) => AccountLoginPage(

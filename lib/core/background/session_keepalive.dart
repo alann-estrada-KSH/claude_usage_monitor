@@ -5,10 +5,13 @@ import 'package:workmanager/workmanager.dart';
 
 import '../notifications/notification_service.dart';
 import '../notifications/usage_alert_service.dart';
+import '../models/usage_update.dart';
+import '../models/usage_history_point.dart';
 import '../scraping/usage_scraper.dart';
 import '../storage/account_store.dart';
 import '../storage/app_settings_store.dart';
 import '../storage/notification_log_store.dart';
+import '../storage/usage_history_store.dart';
 import '../widgets/android_widget_bridge.dart';
 
 const _uniqueName = 'claude_usage_monitor.session_keepalive';
@@ -30,6 +33,8 @@ void sessionKeepAliveCallbackDispatcher() {
       await logStore.init();
       final settingsStore = AppSettingsStore();
       await settingsStore.init();
+      final historyStore = UsageHistoryStore();
+      await historyStore.init();
 
       await NotificationService.instance.initBackground();
       final alerts = UsageAlertService(
@@ -43,36 +48,39 @@ void sessionKeepAliveCallbackDispatcher() {
       for (final account in accountStore.getAll()) {
         try {
           final previous = account.lastKnownUsage;
-          final snapshot = await scraper.fetchUsage(profile: account.id);
+          final snapshot = await scraper.fetchUsage(
+            profile: account.id,
+            providerType: account.providerType,
+          );
+          final updated = applyUsageSnapshot(
+            account,
+            snapshot,
+            fetchedAt: DateTime.now(),
+          );
+          await accountStore.save(updated);
+          await alerts.checkProviderAvailability(
+            account: updated,
+            privacyMode: settings.pinnedNotificationPrivacyMode,
+          );
           if (snapshot.isAvailable) {
-            final updated = account.copyWith(
-              lastKnownUsage: snapshot,
-              lastFetchedAt: DateTime.now(),
-              clearLastFetchError: true,
-              lastFetchSessionExpired: false,
-            );
-            await accountStore.save(updated);
             await alerts.check(
               account: updated,
               previous: previous,
               next: snapshot,
-              warningThreshold: settings.warningThresholdPercent,
-              criticalThreshold: settings.criticalThresholdPercent,
+              warningThreshold:
+                  account.warningThresholdPercent ??
+                  settings.warningThresholdPercent,
+              criticalThreshold:
+                  account.criticalThresholdPercent ??
+                  settings.criticalThresholdPercent,
+              privacyMode: settings.pinnedNotificationPrivacyMode,
             );
-          } else if (snapshot.sessionExpired) {
-            await accountStore.save(
-              account.copyWith(
-                lastFetchedAt: DateTime.now(),
-                clearLastFetchError: true,
-                lastFetchSessionExpired: true,
-              ),
-            );
-          } else {
-            await accountStore.save(
-              account.copyWith(
-                lastFetchedAt: DateTime.now(),
-                lastFetchError: snapshot.parseError ?? 'Unknown error',
-                lastFetchSessionExpired: false,
+            await historyStore.append(
+              account.id,
+              UsageHistoryPoint(
+                timestamp: DateTime.now(),
+                fiveHourPercent: snapshot.fiveHourPercent,
+                weeklyPercent: snapshot.weeklyPercent,
               ),
             );
           }
@@ -82,10 +90,18 @@ void sessionKeepAliveCallbackDispatcher() {
       }
       await AndroidWidgetBridge.publish(
         accountStore.getAll(),
-        notifyNative: false,
+        notifyNative: true,
         persistentNotificationAllAccounts:
             settings.pinnedNotificationAllAccounts,
         persistentNotificationAccountIds: settings.pinnedNotificationAccountIds,
+        persistentNotificationEnabled: settings.pinnedNotificationEnabled,
+        persistentNotificationShowProvider:
+            settings.pinnedNotificationShowProvider,
+        persistentNotificationShowFiveHour:
+            settings.pinnedNotificationShowFiveHour,
+        persistentNotificationShowWeekly: settings.pinnedNotificationShowWeekly,
+        persistentNotificationPrivacyMode:
+            settings.pinnedNotificationPrivacyMode,
         widgetAllAccounts: settings.widgetAllAccounts,
         widgetAccountIds: settings.widgetAccountIds,
       );

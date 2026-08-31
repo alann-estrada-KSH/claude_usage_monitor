@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart';
 
 import '../models/provider_type.dart';
 import '../models/usage_snapshot.dart';
@@ -21,6 +23,76 @@ class UsageApiClient {
   // (slow network, a throttled/rate-limited endpoint) hung the whole fetch
   // forever with no error surfaced anywhere, including diagnostics.
   static const _requestTimeout = Duration(seconds: 15);
+  static const _maxAttempts = 3;
+
+  static Duration retryDelay(int attempt) => Duration(
+    milliseconds: (300 * (1 << attempt.clamp(0, 20))).clamp(300, 5000).toInt(),
+  );
+
+  UsageSnapshot parseFixture(AccountProviderType providerType, Object fixture) {
+    return switch (providerType) {
+      AccountProviderType.claude => _parseClaudeUsage(
+        Map<String, dynamic>.from(fixture as Map),
+      ),
+      AccountProviderType.codex => _parseCodexUsage(
+        Map<String, dynamic>.from(fixture as Map),
+      ),
+      AccountProviderType.antigravity => _parseAntigravityQuotaSummary(
+        Map<String, dynamic>.from(fixture as Map),
+      ),
+      AccountProviderType.copilot => _parseCopilotUsage(
+        Map<String, dynamic>.from(fixture as Map),
+      ),
+      AccountProviderType.openCodeGo => _parseOpenCodeGoUsage(
+        fixture as String,
+      ),
+    };
+  }
+
+  Future<T> _withRetry<T>(Future<T> Function() operation) async {
+    for (var attempt = 0; ; attempt++) {
+      try {
+        return await operation();
+      } catch (error) {
+        final retryable =
+            error is SocketException ||
+            error is TimeoutException ||
+            (error is _ApiHttpException &&
+                (error.statusCode == 429 || error.statusCode >= 500));
+        if (!retryable || attempt >= _maxAttempts - 1) rethrow;
+        await Future<void>.delayed(retryDelay(attempt));
+      }
+    }
+  }
+
+  String? _debugPayload(Object? value) {
+    if (!kDebugMode) return null;
+    return jsonEncode(_redactDiagnostic(value));
+  }
+
+  Object? _redactDiagnostic(Object? value) {
+    if (value is Map) {
+      return {
+        for (final entry in value.entries)
+          entry.key.toString(): _isSensitiveKey(entry.key.toString())
+              ? '[redacted]'
+              : _redactDiagnostic(entry.value),
+      };
+    }
+    if (value is Iterable) return value.map(_redactDiagnostic).toList();
+    if (value is String) {
+      return '[diagnostic text omitted: ${value.length} chars]';
+    }
+    return value;
+  }
+
+  bool _isSensitiveKey(String key) {
+    final normalized = key.toLowerCase();
+    return normalized.contains('token') ||
+        normalized.contains('cookie') ||
+        normalized.contains('authorization') ||
+        normalized.contains('secret');
+  }
 
   Future<UsageSnapshot> fetchUsage(
     String cookieHeader, {
@@ -70,7 +142,7 @@ class UsageApiClient {
       if (fallback == null) {
         return UsageSnapshot.unavailable(
           'Organization UUID missing from API response',
-          rawPageText: jsonEncode(orgs),
+          rawPageText: _debugPayload(orgs),
         );
       }
       return _parseClaudeUsage(fallback);
@@ -154,14 +226,10 @@ class UsageApiClient {
       return UsageSnapshot.unavailable(
         'Antigravity requires an OAuth 2 access token.',
         sessionExpired: true,
-        rawPageText: jsonEncode({
+        rawPageText: _debugPayload({
           'provider': 'antigravity',
           'error':
               'No OAuth 2 bearer token found in input or ~/.gemini/oauth_creds.json',
-          'cookieHeaderLength': cookieHeader.length,
-          'cookieHeaderSample': cookieHeader.length > 60
-              ? cookieHeader.substring(0, 60) + '...'
-              : cookieHeader,
         }),
       );
     }
@@ -213,12 +281,9 @@ class UsageApiClient {
             return UsageSnapshot.unavailable(
               'Antigravity session expired (401) -- re-authenticate Antigravity',
               sessionExpired: true,
-              rawPageText: jsonEncode({
+              rawPageText: _debugPayload({
                 'provider': 'antigravity',
                 'tokenSource': tokenSource,
-                'tokenSample': bearerToken.length > 20
-                    ? bearerToken.substring(0, 20) + '...'
-                    : bearerToken,
                 'apiError': e.toString(),
               }),
             );
@@ -351,7 +416,7 @@ class UsageApiClient {
         return UsageSnapshot.unavailable(
           'Cloud Code Private API is disabled on your Google Cloud project. '
           'Enable it, then wait a few minutes and retry: $serviceDisabledActivationUrl',
-          rawPageText: jsonEncode({
+          rawPageText: _debugPayload({
             'provider': 'antigravity',
             'tokenSource': tokenSource,
             'candidateErrors': candidateErrors,
@@ -378,7 +443,7 @@ class UsageApiClient {
           weeklyPercent: 0.0,
           isAvailable: true,
           sessionExpired: false,
-          rawPageText: jsonEncode({
+          rawPageText: _debugPayload({
             'status': 'configured',
             'provider': 'antigravity',
             'tier': tierName,
@@ -399,10 +464,10 @@ class UsageApiClient {
     return UsageSnapshot.unavailable(
       'Failed to connect to Antigravity API: ${lastError ?? "Unknown error"}',
       sessionExpired: false,
-      rawPageText: jsonEncode({
+      rawPageText: _debugPayload({
         'provider': 'antigravity',
         'tokenSource': tokenSource,
-        if (lastError != null) 'error': lastError,
+        ...?(lastError == null ? null : {'error': lastError}),
       }),
     );
   }
@@ -674,7 +739,7 @@ class UsageApiClient {
     if (groups is! List || groups.isEmpty) {
       return UsageSnapshot.unavailable(
         'Antigravity quota summary had no groups',
-        rawPageText: jsonEncode(json),
+        rawPageText: _debugPayload(json),
       );
     }
 
@@ -755,7 +820,7 @@ class UsageApiClient {
       claudeGptFiveHourResetAt: claudeGptFiveHourResetAt,
       claudeGptWeeklyPercent: claudeGptWeeklyPercent,
       claudeGptWeeklyResetAt: claudeGptWeeklyResetAt,
-      rawPageText: jsonEncode(json),
+      rawPageText: _debugPayload(json),
     );
   }
 
@@ -797,7 +862,7 @@ class UsageApiClient {
       fiveHourPercent: null,
       weeklyPercent: usagePercent ?? 0.0,
       weeklyResetAt: resetAt,
-      rawPageText: jsonEncode(json),
+      rawPageText: _debugPayload(json),
     );
   }
 
@@ -837,7 +902,7 @@ class UsageApiClient {
             fetchedAt: DateTime.now(),
             fiveHourPercent: null,
             weeklyPercent: 0.0,
-            rawPageText: jsonEncode(internalJson),
+            rawPageText: _debugPayload(internalJson),
           );
         }
       } on _ApiHttpException catch (e2) {
@@ -855,7 +920,7 @@ class UsageApiClient {
     return UsageSnapshot.unavailable(
       'GitHub Copilot: ${lastError ?? "Unavailable"}',
       sessionExpired: sessionExpired,
-      rawPageText: jsonEncode({
+      rawPageText: _debugPayload({
         'status': 'error',
         'provider': 'copilot',
         'error': lastError,
@@ -914,7 +979,7 @@ class UsageApiClient {
       fiveHourResetAt: resetDate,
       weeklyPercent: completionsPercent,
       weeklyResetAt: resetDate,
-      rawPageText: jsonEncode(json),
+      rawPageText: _debugPayload(json),
     );
   }
 
@@ -994,7 +1059,7 @@ class UsageApiClient {
     if (rolling == null && weekly == null && monthly == null) {
       return UsageSnapshot.unavailable(
         'OpenCode Go: could not parse usage from dashboard (layout may have changed)',
-        rawPageText: html,
+        rawPageText: _debugPayload(html),
       );
     }
 
@@ -1013,7 +1078,7 @@ class UsageApiClient {
       monthlyResetAt: monthly == null
           ? null
           : now.add(Duration(seconds: monthly.$2)),
-      rawPageText: html,
+      rawPageText: _debugPayload(html),
     );
   }
 
@@ -1108,33 +1173,35 @@ class UsageApiClient {
     String cookieHeader, {
     String? referer,
   }) async {
-    final request = await client.getUrl(uri);
-    request.headers.set(
-      HttpHeaders.userAgentHeader,
-      'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-    );
-    request.headers.set(HttpHeaders.cookieHeader, cookieHeader);
-    request.headers.set(
-      HttpHeaders.acceptHeader,
-      'text/html,application/xhtml+xml',
-    );
-    if (referer != null) {
-      request.headers.set(HttpHeaders.refererHeader, referer);
-    }
-    final response = await request.close().timeout(_requestTimeout);
-    final body = await response
-        .transform(utf8.decoder)
-        .join()
-        .timeout(_requestTimeout);
-    if (response.statusCode != 200) {
-      final isAuth = response.statusCode == 401 || response.statusCode == 403;
-      throw _ApiHttpException(
-        response.statusCode,
-        '${response.statusCode} for $uri',
-        isAuthError: isAuth,
+    return _withRetry(() async {
+      final request = await client.getUrl(uri);
+      request.headers.set(
+        HttpHeaders.userAgentHeader,
+        'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
       );
-    }
-    return body;
+      request.headers.set(HttpHeaders.cookieHeader, cookieHeader);
+      request.headers.set(
+        HttpHeaders.acceptHeader,
+        'text/html,application/xhtml+xml',
+      );
+      if (referer != null) {
+        request.headers.set(HttpHeaders.refererHeader, referer);
+      }
+      final response = await request.close().timeout(_requestTimeout);
+      final body = await response
+          .transform(utf8.decoder)
+          .join()
+          .timeout(_requestTimeout);
+      if (response.statusCode != 200) {
+        final isAuth = response.statusCode == 401 || response.statusCode == 403;
+        throw _ApiHttpException(
+          response.statusCode,
+          '${response.statusCode} for $uri',
+          isAuthError: isAuth,
+        );
+      }
+      return body;
+    });
   }
 
   Future<dynamic> _getJson(
@@ -1145,53 +1212,55 @@ class UsageApiClient {
     String? referer,
     Map<String, String>? headers,
   }) async {
-    final request = await client.getUrl(uri);
-    request.headers.set(
-      HttpHeaders.userAgentHeader,
-      'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-    );
-    request.headers.set(HttpHeaders.cookieHeader, cookieHeader);
-    request.headers.set(
-      HttpHeaders.acceptHeader,
-      'application/json, text/plain, */*',
-    );
-    request.headers.set('Sec-Fetch-Dest', 'empty');
-    request.headers.set('Sec-Fetch-Mode', 'cors');
-    request.headers.set('Sec-Fetch-Site', 'same-origin');
-
-    if (headers != null) {
-      headers.forEach((k, v) => request.headers.set(k, v));
-    }
-
-    if (referer != null) {
-      request.headers.set(HttpHeaders.refererHeader, referer);
-    } else if (uri.host.contains('chatgpt.com')) {
-      request.headers.set(HttpHeaders.refererHeader, 'https://chatgpt.com/');
-    }
-    if (uri.host.contains('chatgpt.com')) {
-      request.headers.set('Origin', 'https://chatgpt.com');
-    }
-
-    if (bearerToken != null && bearerToken.isNotEmpty) {
+    return _withRetry(() async {
+      final request = await client.getUrl(uri);
       request.headers.set(
-        HttpHeaders.authorizationHeader,
-        'Bearer $bearerToken',
+        HttpHeaders.userAgentHeader,
+        'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
       );
-    }
-    final response = await request.close().timeout(_requestTimeout);
-    final body = await response
-        .transform(utf8.decoder)
-        .join()
-        .timeout(_requestTimeout);
-    if (response.statusCode != 200) {
-      final isAuth = response.statusCode == 401 || response.statusCode == 403;
-      throw _ApiHttpException(
-        response.statusCode,
-        '${response.statusCode} for $uri: $body',
-        isAuthError: isAuth,
+      request.headers.set(HttpHeaders.cookieHeader, cookieHeader);
+      request.headers.set(
+        HttpHeaders.acceptHeader,
+        'application/json, text/plain, */*',
       );
-    }
-    return jsonDecode(body);
+      request.headers.set('Sec-Fetch-Dest', 'empty');
+      request.headers.set('Sec-Fetch-Mode', 'cors');
+      request.headers.set('Sec-Fetch-Site', 'same-origin');
+
+      if (headers != null) {
+        headers.forEach((k, v) => request.headers.set(k, v));
+      }
+
+      if (referer != null) {
+        request.headers.set(HttpHeaders.refererHeader, referer);
+      } else if (uri.host.contains('chatgpt.com')) {
+        request.headers.set(HttpHeaders.refererHeader, 'https://chatgpt.com/');
+      }
+      if (uri.host.contains('chatgpt.com')) {
+        request.headers.set('Origin', 'https://chatgpt.com');
+      }
+
+      if (bearerToken != null && bearerToken.isNotEmpty) {
+        request.headers.set(
+          HttpHeaders.authorizationHeader,
+          'Bearer $bearerToken',
+        );
+      }
+      final response = await request.close().timeout(_requestTimeout);
+      final body = await response
+          .transform(utf8.decoder)
+          .join()
+          .timeout(_requestTimeout);
+      if (response.statusCode != 200) {
+        final isAuth = response.statusCode == 401 || response.statusCode == 403;
+        throw _ApiHttpException(
+          response.statusCode,
+          '${response.statusCode} for $uri',
+          isAuthError: isAuth,
+        );
+      }
+      return jsonDecode(body);
+    });
   }
 
   String? _getSapisidHash(String cookieHeader, String origin) {
@@ -1214,54 +1283,56 @@ class UsageApiClient {
     String? origin,
     Map<String, String>? extraHeaders,
   }) async {
-    final request = await client.postUrl(uri);
-    request.headers.set(
-      HttpHeaders.userAgentHeader,
-      userAgent ?? 'antigravity',
-    );
-    request.headers.set(HttpHeaders.contentTypeHeader, 'application/json');
-    if (cookieHeader.isNotEmpty) {
-      request.headers.set(HttpHeaders.cookieHeader, cookieHeader);
-    }
-    if (extraHeaders != null) {
-      extraHeaders.forEach((k, v) => request.headers.set(k, v));
-    }
-
-    if (origin != null && origin.isNotEmpty) {
-      request.headers.set('Origin', origin);
-    }
-
-    if (bearerToken != null && bearerToken.isNotEmpty) {
-      final cleanToken = bearerToken.toLowerCase().startsWith('bearer ')
-          ? bearerToken.substring(7).trim()
-          : bearerToken.trim();
+    return _withRetry(() async {
+      final request = await client.postUrl(uri);
       request.headers.set(
-        HttpHeaders.authorizationHeader,
-        'Bearer $cleanToken',
+        HttpHeaders.userAgentHeader,
+        userAgent ?? 'antigravity',
       );
-    } else {
-      final effectiveOrigin = origin ?? 'https://aistudio.google.com';
-      final sapisidHash = _getSapisidHash(cookieHeader, effectiveOrigin);
-      if (sapisidHash != null) {
-        request.headers.set(HttpHeaders.authorizationHeader, sapisidHash);
+      request.headers.set(HttpHeaders.contentTypeHeader, 'application/json');
+      if (cookieHeader.isNotEmpty) {
+        request.headers.set(HttpHeaders.cookieHeader, cookieHeader);
       }
-    }
+      if (extraHeaders != null) {
+        extraHeaders.forEach((k, v) => request.headers.set(k, v));
+      }
 
-    request.write(jsonEncode(bodyJson));
-    final response = await request.close().timeout(_requestTimeout);
-    final body = await response
-        .transform(utf8.decoder)
-        .join()
-        .timeout(_requestTimeout);
-    if (response.statusCode != 200) {
-      final isAuth = response.statusCode == 401 || response.statusCode == 403;
-      throw _ApiHttpException(
-        response.statusCode,
-        '${response.statusCode} for $uri: $body',
-        isAuthError: isAuth,
-      );
-    }
-    return jsonDecode(body);
+      if (origin != null && origin.isNotEmpty) {
+        request.headers.set('Origin', origin);
+      }
+
+      if (bearerToken != null && bearerToken.isNotEmpty) {
+        final cleanToken = bearerToken.toLowerCase().startsWith('bearer ')
+            ? bearerToken.substring(7).trim()
+            : bearerToken.trim();
+        request.headers.set(
+          HttpHeaders.authorizationHeader,
+          'Bearer $cleanToken',
+        );
+      } else {
+        final effectiveOrigin = origin ?? 'https://aistudio.google.com';
+        final sapisidHash = _getSapisidHash(cookieHeader, effectiveOrigin);
+        if (sapisidHash != null) {
+          request.headers.set(HttpHeaders.authorizationHeader, sapisidHash);
+        }
+      }
+
+      request.write(jsonEncode(bodyJson));
+      final response = await request.close().timeout(_requestTimeout);
+      final body = await response
+          .transform(utf8.decoder)
+          .join()
+          .timeout(_requestTimeout);
+      if (response.statusCode != 200) {
+        final isAuth = response.statusCode == 401 || response.statusCode == 403;
+        throw _ApiHttpException(
+          response.statusCode,
+          '${response.statusCode} for $uri',
+          isAuthError: isAuth,
+        );
+      }
+      return jsonDecode(body);
+    });
   }
 
   UsageSnapshot _parseClaudeUsage(Map<String, dynamic> json) {
@@ -1273,7 +1344,7 @@ class UsageApiClient {
       weeklyPercent: (sevenDay?['utilization'] as num?)?.toDouble(),
       fiveHourResetAt: _parseIso(fiveHour?['resets_at'] as String?),
       weeklyResetAt: _parseIso(sevenDay?['resets_at'] as String?),
-      rawPageText: jsonEncode(json),
+      rawPageText: _debugPayload(json),
     );
   }
 
@@ -1293,12 +1364,12 @@ class UsageApiClient {
         return UsageSnapshot(
           fetchedAt: DateTime.now(),
           weeklyPercent: topUsed,
-          rawPageText: jsonEncode(json),
+          rawPageText: _debugPayload(json),
         );
       }
       return UsageSnapshot.unavailable(
         'No rate limit data found in Codex response',
-        rawPageText: jsonEncode(json),
+        rawPageText: _debugPayload(json),
       );
     }
 
@@ -1380,7 +1451,7 @@ class UsageApiClient {
       weeklyPercent: weeklyPct,
       fiveHourResetAt: fiveHourReset,
       weeklyResetAt: weeklyReset,
-      rawPageText: jsonEncode(json),
+      rawPageText: _debugPayload(json),
     );
   }
 

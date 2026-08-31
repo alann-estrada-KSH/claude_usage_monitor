@@ -1,0 +1,18 @@
+{
+  "groups": [
+    {
+      "displayName": "Gemini Models",
+      "buckets": [
+        {"displayName": "Five Hour Limit", "remainingFraction": 0.8, "resetTime": "2026-08-30T15:00:00Z"},
+        {"displayName": "Weekly Limit", "remainingFraction": 0.55, "resetTime": "2026-09-05T15:00:00Z"}
+      ]
+    },
+    {
+      "displayName": "Claude and GPT Models",
+      "buckets": [
+        {"displayName": "Five Hour Limit", "remainingFraction": 0.5, "resetTime": "2026-08-30T15:00:00Z"},
+        {"displayName": "Weekly Limit", "remainingFraction": 0.25, "resetTime": "2026-09-05T15:00:00Z"}
+      ]
+    }
+  ]
+}

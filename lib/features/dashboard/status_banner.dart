@@ -46,17 +46,20 @@ class StatusBanner extends StatelessWidget {
     // Only the real severity states get a highlighted background --
     // loading and "couldn't reach the status API" are informational, not
     // alarming, so they stay flat.
-    final highlighted = !isLoading && !isNetworkError && status.indicator != 'none';
+    final highlighted =
+        !isLoading && !isNetworkError && status.indicator != 'none';
 
     return InkWell(
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => const StatusDetailPage()),
-      ),
+      onTap: () => Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (_) => const StatusDetailPage())),
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: highlighted ? color.withValues(alpha: 0.12) : Colors.transparent,
+          color: highlighted
+              ? color.withValues(alpha: 0.12)
+              : Colors.transparent,
           border: Border(bottom: BorderSide(color: colorScheme.outlineVariant)),
         ),
         child: Row(
@@ -66,7 +69,9 @@ class StatusBanner extends StatelessWidget {
             Expanded(
               child: Text(
                 label,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: color),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: color),
                 overflow: TextOverflow.ellipsis,
               ),
             ),

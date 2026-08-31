@@ -18,7 +18,8 @@ class ClaudeMark extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tint = color ?? Theme.of(context).colorScheme.primary;
-    final svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">'
+    final svg =
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">'
         '<path clip-rule="evenodd" fill-rule="evenodd" d="$_path" fill="#${_hex(tint)}"/>'
         '</svg>';
     return SvgPicture.string(svg, width: size, height: size);

@@ -32,4 +32,6 @@ class NotificationLogStore {
 
   /// For the debug panel: every key currently marked as fired.
   List<String> firedKeys() => _requireBox.keys.cast<String>().toList()..sort();
+
+  Future<void> clearAll() => _requireBox.clear();
 }

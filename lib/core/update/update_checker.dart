@@ -28,8 +28,14 @@ class UpdateChecker {
     final client = HttpClient();
     try {
       final request = await client.getUrl(Uri.parse(_latestReleaseUrl));
-      request.headers.set(HttpHeaders.acceptHeader, 'application/vnd.github+json');
-      request.headers.set(HttpHeaders.userAgentHeader, 'claude_usage_monitor-update-checker');
+      request.headers.set(
+        HttpHeaders.acceptHeader,
+        'application/vnd.github+json',
+      );
+      request.headers.set(
+        HttpHeaders.userAgentHeader,
+        'claude_usage_monitor-update-checker',
+      );
       final response = await request.close();
       if (response.statusCode != 200) {
         await response.drain<void>();
@@ -39,14 +45,16 @@ class UpdateChecker {
       final json = jsonDecode(body) as Map<String, dynamic>;
 
       final tagName = json['tag_name'] as String? ?? '';
-      final remoteVersion = tagName.startsWith('v') ? tagName.substring(1) : tagName;
+      final remoteVersion = tagName.startsWith('v')
+          ? tagName.substring(1)
+          : tagName;
       final currentVersion = (await PackageInfo.fromPlatform()).version;
       if (!_isNewer(remoteVersion, currentVersion)) return null;
 
       final assets = (json['assets'] as List?) ?? const [];
       final installerAsset = assets.cast<Map<String, dynamic>>().where(
-            (a) => (a['name'] as String? ?? '').toLowerCase().endsWith('.exe'),
-          );
+        (a) => (a['name'] as String? ?? '').toLowerCase().endsWith('.exe'),
+      );
       if (installerAsset.isEmpty) return null;
 
       return AppUpdateInfo(
@@ -54,8 +62,7 @@ class UpdateChecker {
         downloadUrl: installerAsset.first['browser_download_url'] as String,
         releaseUrl: json['html_url'] as String? ?? '',
       );
-    } catch (e) {
-      print('[UpdateChecker] check failed: $e');
+    } catch (_) {
       return null;
     } finally {
       client.close(force: true);
@@ -63,13 +70,27 @@ class UpdateChecker {
   }
 
   /// Downloads [url] to a temp file, reporting 0-1 progress via [onProgress].
-  Future<File> downloadInstaller(String url, {void Function(double)? onProgress}) async {
+  Future<File> downloadInstaller(
+    String url, {
+    void Function(double)? onProgress,
+  }) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null ||
+        uri.scheme != 'https' ||
+        !(uri.host == 'github.com' ||
+            uri.host.endsWith('.github.com') ||
+            uri.host == 'githubusercontent.com' ||
+            uri.host.endsWith('.githubusercontent.com'))) {
+      throw const FormatException('Untrusted update host');
+    }
     final client = HttpClient();
     try {
       final request = await client.getUrl(Uri.parse(url));
       final response = await request.close();
       final total = response.contentLength;
-      final tempDir = await Directory.systemTemp.createTemp('claude_usage_monitor_update');
+      final tempDir = await Directory.systemTemp.createTemp(
+        'claude_usage_monitor_update',
+      );
       final file = File(p.join(tempDir.path, 'ClaudeUsageMonitorSetup.exe'));
       final sink = file.openWrite();
       var received = 0;
@@ -85,18 +106,36 @@ class UpdateChecker {
     }
   }
 
-  /// Launches the downloaded installer (detached, outliving this process)
-  /// then exits the app so the installer can overwrite its files --
-  /// `CloseApplications=yes` in installer.iss also handles this if the
-  /// app is somehow still running.
-  Future<void> runInstallerAndExit(File installer) async {
+  /// Refuses automatic execution until Windows Authenticode reports a valid
+  /// signature. Current unsigned builds therefore require manual install.
+  Future<bool> isInstallerSigned(File installer) async {
+    if (!Platform.isWindows) return false;
+    final result = await Process.run('powershell.exe', [
+      '-NoProfile',
+      '-NonInteractive',
+      '-Command',
+      '(Get-AuthenticodeSignature -LiteralPath \$args[0]).Status -eq "Valid"',
+      installer.path,
+    ]);
+    return result.exitCode == 0 && result.stdout.toString().trim() == 'True';
+  }
+
+  /// Launches only a valid Authenticode-signed installer.
+  Future<bool> runInstallerAndExit(File installer) async {
+    if (!await isInstallerSigned(installer)) return false;
     await Process.start(installer.path, [], mode: ProcessStartMode.detached);
     exit(0);
   }
 
   bool _isNewer(String remote, String current) {
-    final remoteParts = remote.split('.').map((p) => int.tryParse(p) ?? 0).toList();
-    final currentParts = current.split('.').map((p) => int.tryParse(p) ?? 0).toList();
+    final remoteParts = remote
+        .split('.')
+        .map((p) => int.tryParse(p) ?? 0)
+        .toList();
+    final currentParts = current
+        .split('.')
+        .map((p) => int.tryParse(p) ?? 0)
+        .toList();
     for (var i = 0; i < remoteParts.length || i < currentParts.length; i++) {
       final r = i < remoteParts.length ? remoteParts[i] : 0;
       final c = i < currentParts.length ? currentParts[i] : 0;

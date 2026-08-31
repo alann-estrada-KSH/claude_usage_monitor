@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Monitor de uso</string>
+    <string name="no_phone_data">Abre la app del teléfono para sincronizar.</string>
+    <string name="watch_title">Monitor de uso</string>
+    <string name="complication_choose_account">Cuenta de complication</string>
+    <string name="complication_save">Guardar</string>
+</resources>

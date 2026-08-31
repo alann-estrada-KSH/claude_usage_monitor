@@ -62,8 +62,9 @@ signing infrastructure; don't add this line if that tradeoff bothers you and
 just grab the `.deb` from Releases instead.
 
 **Windows:** download `ClaudeUsageMonitorSetup.exe` from the latest release
-and run it, or use Settings > Updates inside the app once installed --
-it checks GitHub Releases, downloads, and runs the installer for you.
+and run it. Settings > Updates downloads only installers with a valid
+Authenticode signature; current unsigned builds are blocked from automatic
+execution until Windows signing is configured.
 
 **Android:** available on Google Play (internal testing track for now). Want
 in? [Open an issue](https://github.com/alann-estrada-KSH/claude_usage_monitor/issues/new?title=Add+me+as+an+Android+internal+tester)
@@ -73,6 +74,17 @@ for a few internal testers in general to shake out bugs before a wider
 release, so feel free to open one just to volunteer even without a specific
 issue in mind. You can also build and `flutter install` it yourself, or
 sideload the debug/release APK, without waiting on any of that.
+
+**Wear OS:** the separate `wear` Android module receives only sanitized usage
+JSON from the phone through the Wear Data Layer. Cookies, OAuth tokens and
+provider sessions never leave the phone. Build `:wear:assembleRelease` and
+install the resulting `wear-release.apk` on a Wear OS watch; the app and
+configurable account complication show last-known values and stale state.
+
+**Tasker:** send broadcast action
+`com.claudeusagemonitor.claude_usage_monitor.TASKER_REFRESH`. It opens the
+phone app and triggers its normal refresh path, with a 30-second native
+rate-limit.
 
 ### Vendored patches: `desktop_webview_window` on Linux
 

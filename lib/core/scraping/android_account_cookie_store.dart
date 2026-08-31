@@ -27,10 +27,14 @@ class AndroidAccountCookieStore {
 
   String _keyFor(String accountId) => 'android_cookie_header_$accountId';
 
-  Future<String?> read(String accountId) => _storage.read(key: _keyFor(accountId));
+  Future<String?> read(String accountId) =>
+      _storage.read(key: _keyFor(accountId));
 
   Future<void> save(String accountId, String cookieHeader) =>
       _storage.write(key: _keyFor(accountId), value: cookieHeader);
 
-  Future<void> delete(String accountId) => _storage.delete(key: _keyFor(accountId));
+  Future<void> delete(String accountId) =>
+      _storage.delete(key: _keyFor(accountId));
+
+  Future<void> deleteAll() => _storage.deleteAll();
 }

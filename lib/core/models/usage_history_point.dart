@@ -13,12 +13,13 @@ class UsageHistoryPoint {
   final double? weeklyPercent;
 
   Map<String, dynamic> toJson() => {
-        'timestamp': timestamp.toIso8601String(),
-        'fiveHourPercent': fiveHourPercent,
-        'weeklyPercent': weeklyPercent,
-      };
+    'timestamp': timestamp.toIso8601String(),
+    'fiveHourPercent': fiveHourPercent,
+    'weeklyPercent': weeklyPercent,
+  };
 
-  factory UsageHistoryPoint.fromJson(Map<String, dynamic> json) => UsageHistoryPoint(
+  factory UsageHistoryPoint.fromJson(Map<String, dynamic> json) =>
+      UsageHistoryPoint(
         timestamp: DateTime.parse(json['timestamp'] as String),
         fiveHourPercent: (json['fiveHourPercent'] as num?)?.toDouble(),
         weeklyPercent: (json['weeklyPercent'] as num?)?.toDouble(),

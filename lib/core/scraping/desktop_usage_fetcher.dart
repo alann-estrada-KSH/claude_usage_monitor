@@ -13,7 +13,11 @@ Future<String> fetchCookieHeaderDesktop({
   AccountProviderType providerType = AccountProviderType.claude,
 }) {
   return DesktopWebviewLock.run(
-    () => _fetchCookieHeaderDesktop(timeout: timeout, profile: profile, providerType: providerType),
+    () => _fetchCookieHeaderDesktop(
+      timeout: timeout,
+      profile: profile,
+      providerType: providerType,
+    ),
   );
 }
 
@@ -46,7 +50,10 @@ Future<String> _fetchCookieHeaderDesktop({
   }
 }
 
-Future<void> _waitForNavigationToSettle(Webview webview, Duration timeout) async {
+Future<void> _waitForNavigationToSettle(
+  Webview webview,
+  Duration timeout,
+) async {
   final completer = Completer<void>();
   var sawLoading = false;
 

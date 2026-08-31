@@ -5,7 +5,8 @@ import '../polling/usage_poller.dart';
 import 'claude_status_service.dart';
 
 class ClaudeStatusProvider extends ChangeNotifier {
-  ClaudeStatusProvider({ClaudeStatusService? service}) : _service = service ?? const ClaudeStatusService();
+  ClaudeStatusProvider({ClaudeStatusService? service})
+    : _service = service ?? const ClaudeStatusService();
 
   final ClaudeStatusService _service;
   UsagePoller? _poller;

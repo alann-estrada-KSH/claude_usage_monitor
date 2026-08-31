@@ -15,14 +15,18 @@ import 'notification_service.dart';
 /// - Schedules an exact/inexact alarm for each window's next `resetAt` so the
 ///   reset notification fires even when the app is not in the foreground.
 class UsageAlertService {
-  UsageAlertService({NotificationService? notifications, NotificationLogStore? log})
-      : _notifications = notifications ?? NotificationService.instance,
-        _log = log ?? NotificationLogStore();
+  UsageAlertService({
+    NotificationService? notifications,
+    NotificationLogStore? log,
+  }) : _notifications = notifications ?? NotificationService.instance,
+       _log = log ?? NotificationLogStore();
 
   final NotificationService _notifications;
   final NotificationLogStore _log;
 
   Future<void> init() => _log.init();
+
+  Future<void> clearData() => _log.clearAll();
 
   Future<void> check({
     required ClaudeAccount account,
@@ -30,9 +34,13 @@ class UsageAlertService {
     required UsageSnapshot next,
     int warningThreshold = 80,
     int criticalThreshold = 95,
+    String privacyMode = 'full',
   }) async {
+    final visibleAccount = privacyMode == 'full' ? account.label : 'una cuenta';
     await _checkWindow(
       account: account,
+      accountLabel: visibleAccount,
+      hideUsage: privacyMode == 'hidden',
       windowKey: 'five_hour',
       previousPercent: previous?.fiveHourPercent,
       previousResetAt: previous?.fiveHourResetAt,
@@ -43,6 +51,8 @@ class UsageAlertService {
     );
     await _checkWindow(
       account: account,
+      accountLabel: visibleAccount,
+      hideUsage: privacyMode == 'hidden',
       windowKey: 'weekly',
       previousPercent: previous?.weeklyPercent,
       previousResetAt: previous?.weeklyResetAt,
@@ -53,8 +63,37 @@ class UsageAlertService {
     );
   }
 
+  Future<void> checkProviderAvailability({
+    required ClaudeAccount account,
+    String privacyMode = 'full',
+  }) async {
+    final key = '${account.providerType.name}:provider_unavailable';
+    if (account.consecutiveFailures >= 2) {
+      if (_log.hasFired(key)) return;
+      await _log.markFired(key);
+      final lang = PlatformDispatcher.instance.locale.languageCode == 'es'
+          ? 'es'
+          : 'en';
+      final provider = privacyMode == 'hidden'
+          ? (lang == 'es' ? 'El proveedor' : 'The provider')
+          : account.providerType.displayName;
+      await _notifications.show(
+        title: lang == 'es'
+            ? 'Proveedor no disponible'
+            : 'Provider unavailable',
+        body: lang == 'es'
+            ? '$provider no responde después de varios intentos.'
+            : '$provider has not responded after several attempts.',
+      );
+      return;
+    }
+    await _log.clear(key);
+  }
+
   Future<void> _checkWindow({
     required ClaudeAccount account,
+    required String accountLabel,
+    required bool hideUsage,
     required String windowKey,
     required double? previousPercent,
     required DateTime? previousResetAt,
@@ -67,19 +106,22 @@ class UsageAlertService {
     // not the in-app language override setting -- wiring that through would
     // mean threading SettingsProvider into AccountProvider/this service for
     // a cosmetic edge case (override language differs from OS language).
-    final lang = PlatformDispatcher.instance.locale.languageCode == 'es' ? 'es' : 'en';
+    final lang = PlatformDispatcher.instance.locale.languageCode == 'es'
+        ? 'es'
+        : 'en';
 
     // --- Reset detection (immediate, after the fact) ---
     if (previousResetAt != null &&
         previousPercent != null &&
         previousPercent > 1 &&
         DateTime.now().isAfter(previousResetAt)) {
-      final key = '${account.id}:$windowKey:reset:${previousResetAt.toIso8601String()}';
+      final key =
+          '${account.id}:$windowKey:reset:${previousResetAt.toIso8601String()}';
       if (!_log.hasFired(key)) {
         await _log.markFired(key);
         await _notifications.show(
           title: _resetTitle(lang),
-          body: _resetBody(lang, windowKey, account.label),
+          body: _resetBody(lang, windowKey, accountLabel),
         );
       }
     }
@@ -91,7 +133,7 @@ class UsageAlertService {
         await _log.markFired(exhaustedKey);
         await _notifications.show(
           title: _exhaustedTitle(lang),
-          body: _exhaustedBody(lang, windowKey, account.label),
+          body: _exhaustedBody(lang, windowKey, accountLabel),
         );
       }
     } else if (nextPercent != null && nextPercent < 100) {
@@ -109,7 +151,12 @@ class UsageAlertService {
           await _log.markFired(warnKey);
           await _notifications.show(
             title: _warningTitle(lang),
-            body: _thresholdBody(lang, windowKey, account.label, next.toInt()),
+            body: _thresholdBody(
+              lang,
+              windowKey,
+              accountLabel,
+              hideUsage ? null : next.toInt(),
+            ),
           );
         }
       } else if (next < warningThreshold) {
@@ -122,7 +169,12 @@ class UsageAlertService {
           await _log.markFired(critKey);
           await _notifications.show(
             title: _criticalTitle(lang),
-            body: _thresholdBody(lang, windowKey, account.label, next.toInt()),
+            body: _thresholdBody(
+              lang,
+              windowKey,
+              accountLabel,
+              hideUsage ? null : next.toInt(),
+            ),
           );
         }
       } else if (next < criticalThreshold) {
@@ -137,7 +189,7 @@ class UsageAlertService {
       await _notifications.scheduleAt(
         id: schedId,
         title: _resetTitle(lang),
-        body: _resetBody(lang, windowKey, account.label),
+        body: _resetBody(lang, windowKey, accountLabel),
         when: nextResetAt,
       );
     }
@@ -155,7 +207,8 @@ class UsageAlertService {
     return lang == 'es' ? 'límite semanal' : 'weekly limit';
   }
 
-  String _resetTitle(String lang) => lang == 'es' ? 'Límite reiniciado' : 'Limit reset';
+  String _resetTitle(String lang) =>
+      lang == 'es' ? 'Límite reiniciado' : 'Limit reset';
 
   String _resetBody(String lang, String windowKey, String accountLabel) {
     final w = _windowLabel(lang, windowKey);
@@ -164,7 +217,8 @@ class UsageAlertService {
         : 'Your $w for "$accountLabel" just reset.';
   }
 
-  String _exhaustedTitle(String lang) => lang == 'es' ? 'Límite alcanzado' : 'Limit reached';
+  String _exhaustedTitle(String lang) =>
+      lang == 'es' ? 'Límite alcanzado' : 'Limit reached';
 
   String _exhaustedBody(String lang, String windowKey, String accountLabel) {
     final w = _windowLabel(lang, windowKey);
@@ -173,12 +227,24 @@ class UsageAlertService {
         : 'You hit the $w limit on "$accountLabel".';
   }
 
-  String _warningTitle(String lang) => lang == 'es' ? 'Aviso de uso' : 'Usage warning';
+  String _warningTitle(String lang) =>
+      lang == 'es' ? 'Aviso de uso' : 'Usage warning';
 
-  String _criticalTitle(String lang) => lang == 'es' ? 'Uso crítico' : 'Usage critical';
+  String _criticalTitle(String lang) =>
+      lang == 'es' ? 'Uso crítico' : 'Usage critical';
 
-  String _thresholdBody(String lang, String windowKey, String accountLabel, int percent) {
+  String _thresholdBody(
+    String lang,
+    String windowKey,
+    String accountLabel,
+    int? percent,
+  ) {
     final w = _windowLabel(lang, windowKey);
+    if (percent == null) {
+      return lang == 'es'
+          ? 'Hay una actualización de límites en "$accountLabel".'
+          : 'A limit update is available for "$accountLabel".';
+    }
     return lang == 'es'
         ? 'Tu $w de "$accountLabel" está al $percent%.'
         : 'Your $w for "$accountLabel" is at $percent%.';

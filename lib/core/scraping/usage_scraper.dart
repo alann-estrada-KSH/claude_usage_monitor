@@ -53,9 +53,8 @@ class UsageScraper {
         providerType: providerType,
         accountId: profile,
       );
-    } catch (e) {
-      print('[UsageScraper] scrape failed: $e');
-      return UsageSnapshot.unavailable('Unexpected scrape error: $e');
+    } catch (_) {
+      return UsageSnapshot.unavailable('Unexpected scrape error');
     }
   }
 

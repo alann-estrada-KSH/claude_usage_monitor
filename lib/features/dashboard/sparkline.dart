@@ -46,14 +46,18 @@ class _MeterPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final segmentWidth = (size.width - _segmentGap * (_segmentCount - 1)) / _segmentCount;
+    final segmentWidth =
+        (size.width - _segmentGap * (_segmentCount - 1)) / _segmentCount;
     final emptyPaint = Paint()..color = gridColor.withValues(alpha: 0.35);
-    final filledSegments =
-        percent == null ? 0 : (_segmentCount * (percent!.clamp(0, 100)) / 100).round();
+    final filledSegments = percent == null
+        ? 0
+        : (_segmentCount * (percent!.clamp(0, 100)) / 100).round();
 
     for (var c = 0; c < _segmentCount; c++) {
       final left = c * (segmentWidth + _segmentGap);
-      final filledPaint = color == null || c >= filledSegments ? null : (Paint()..color = color!);
+      final filledPaint = color == null || c >= filledSegments
+          ? null
+          : (Paint()..color = color!);
       canvas.drawRect(
         Rect.fromLTWH(left, 0, segmentWidth, size.height),
         filledPaint ?? emptyPaint,

@@ -589,6 +589,10 @@ class AppLocalizationsEs extends AppLocalizations {
       'Descargando... la app se cerrará para instalar.';
 
   @override
+  String get updatesUnsignedInstaller =>
+      'El instalador no está firmado. Se bloqueó la instalación automática.';
+
+  @override
   String get resetSection => 'Restablecer';
 
   @override
@@ -693,4 +697,112 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get codexReasonFirewall =>
       'Red o VPN bloqueando el acceso a chatgpt.com.';
+
+  @override
+  String get notificationEnabled => 'Mantener notificación de estado';
+
+  @override
+  String get notificationShowProvider => 'Mostrar proveedor';
+
+  @override
+  String get notificationShowFiveHour => 'Mostrar uso de 5 horas';
+
+  @override
+  String get notificationShowWeekly => 'Mostrar uso semanal';
+
+  @override
+  String get notificationPrivacy => 'Privacidad en pantalla bloqueada';
+
+  @override
+  String get notificationPrivacyFull => 'Cuenta y uso';
+
+  @override
+  String get notificationPrivacyHideAccounts => 'Ocultar nombres de cuenta';
+
+  @override
+  String get notificationPrivacyHidden => 'Ocultar todo el uso';
+
+  @override
+  String get historyWindow => 'Historial';
+
+  @override
+  String get history24Hours => '24 h';
+
+  @override
+  String get history7Days => '7 d';
+
+  @override
+  String get history30Days => '30 d';
+
+  @override
+  String get allAccountsFilter => 'Todas las cuentas';
+
+  @override
+  String get allProvidersFilter => 'Todos los proveedores';
+
+  @override
+  String get providerOverview => 'Comparación por proveedor';
+
+  @override
+  String get providerHealthy => 'Correcto';
+
+  @override
+  String get providerStale => 'Dato antiguo';
+
+  @override
+  String get providerProblem => 'Requiere atención';
+
+  @override
+  String get providerNoData => 'Sin datos';
+
+  @override
+  String get manualReloginTooltip => 'Volver a iniciar sesión';
+
+  @override
+  String get customLimitsTooltip => 'Límites personalizados';
+
+  @override
+  String customLimitsTitle(String account) {
+    return 'Límites personalizados de $account';
+  }
+
+  @override
+  String get customLimitsUseDefaults => 'Usar límites globales';
+
+  @override
+  String get deleteAllDataSection => 'Borrar todos los datos';
+
+  @override
+  String get deleteAllDataDescription =>
+      'Elimina cuentas, sesiones, credenciales cifradas, historial, registros de notificación y configuración de este dispositivo.';
+
+  @override
+  String get deleteAllDataButton => 'Borrar todos los datos de la app';
+
+  @override
+  String get deleteAllDataTitle => '¿Borrar todos los datos de la app?';
+
+  @override
+  String get deleteAllDataBody =>
+      'Tendrás que volver a iniciar sesión. Esta acción no se puede deshacer.';
+
+  @override
+  String get deleteAllDataDone => 'Se borraron todos los datos de la app.';
+
+  @override
+  String get deleteAllDataConfirm => 'Borrar todo';
+
+  @override
+  String get diagnosticsSafeDescription =>
+      'Solo muestra el estado de cuentas y actualizaciones. Nunca incluye tokens, cookies ni respuestas sin procesar del proveedor.';
+
+  @override
+  String get taskerSection => 'Tasker';
+
+  @override
+  String get taskerDescription =>
+      'Envía este broadcast desde Tasker para abrir la app y ejecutar una actualización con límite de frecuencia.';
+
+  @override
+  String get taskerCopyAction => 'Copiar acción broadcast';
 }

@@ -6,6 +6,7 @@ import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.content.Intent
 import android.widget.RemoteViews
+import org.json.JSONArray
 
 class UsageWidgetProvider : AppWidgetProvider() {
     override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) {
@@ -29,6 +30,7 @@ class UsageWidgetProvider : AppWidgetProvider() {
             val weekly: Float,
             val hasError: Boolean,
             val sessionExpired: Boolean,
+            val stale: Boolean,
         )
 
         fun readAccounts(context: Context): List<WidgetAccount> {
@@ -49,6 +51,7 @@ class UsageWidgetProvider : AppWidgetProvider() {
                     weekly = readNumber(prefs, "flutter.usage_widget_${index}_weekly"),
                     hasError = prefs.getBoolean("flutter.usage_widget_${index}_has_error", false),
                     sessionExpired = prefs.getBoolean("flutter.usage_widget_${index}_session_expired", false),
+                    stale = prefs.getBoolean("flutter.usage_widget_${index}_stale", true),
                 )
             }
         }
@@ -72,7 +75,10 @@ class UsageWidgetProvider : AppWidgetProvider() {
             val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             val accounts = readAccounts(context)
             if (prefs.getBoolean("flutter.widget_all_accounts", true)) return accounts
-            val selectedIds = prefs.getStringSet("flutter.widget_account_ids", emptySet()) ?: emptySet()
+            val selectedIds = runCatching {
+                val json = prefs.getString("flutter.widget_account_ids_json", "[]") ?: "[]"
+                JSONArray(json).let { array -> (0 until array.length()).map { array.getString(it) }.toSet() }
+            }.getOrDefault(emptySet())
             return accounts.filter { it.id in selectedIds }
         }
 
@@ -80,11 +86,11 @@ class UsageWidgetProvider : AppWidgetProvider() {
             account.hasError -> context.getString(R.string.widget_error)
             account.sessionExpired -> context.getString(R.string.widget_session_expired)
             account.fiveHour < 0f -> context.getString(R.string.widget_no_data)
-            else -> context.getString(
-                R.string.widget_usage_format,
-                account.fiveHour.toInt(),
-                account.weekly.toInt(),
-            )
+        else -> context.getString(
+            if (account.stale) R.string.widget_usage_stale_format else R.string.widget_usage_format,
+            account.fiveHour.toInt(),
+            account.weekly.toInt(),
+        )
         }
 
         fun compactProviderName(provider: String): String = when {
@@ -119,7 +125,10 @@ class UsageWidgetProvider : AppWidgetProvider() {
                 views.setProgressBar(R.id.widget_weekly_progress, 100, 0, false)
             } else {
                 views.setTextViewText(R.id.widget_label, account.label)
-                views.setTextViewText(R.id.widget_provider, compactProviderName(account.provider))
+                views.setTextViewText(
+                    R.id.widget_provider,
+                    compactProviderName(account.provider) + if (account.stale) " · " + context.getString(R.string.widget_stale) else "",
+                )
                 views.setProgressBar(
                     R.id.widget_five_progress,
                     100,
@@ -146,8 +155,17 @@ class UsageWidgetProvider : AppWidgetProvider() {
                         views.setTextViewText(R.id.widget_weekly, context.getString(R.string.widget_weekly_pending))
                     }
                     else -> {
-                        views.setTextViewText(R.id.widget_five_hour, context.getString(R.string.widget_percent, account.fiveHour.toInt()))
-                        views.setTextViewText(R.id.widget_weekly, context.getString(R.string.widget_percent, account.weekly.toInt()))
+                        views.setTextViewText(
+                            R.id.widget_five_hour,
+                            context.getString(R.string.widget_percent, account.fiveHour.toInt()),
+                        )
+                        views.setTextViewText(
+                            R.id.widget_weekly,
+                            context.getString(
+                                if (account.stale) R.string.widget_weekly_stale_format else R.string.widget_percent,
+                                account.weekly.toInt(),
+                            ),
+                        )
                     }
                 }
             }

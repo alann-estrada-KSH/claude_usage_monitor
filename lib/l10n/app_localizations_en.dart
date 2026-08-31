@@ -585,6 +585,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Downloading... the app will close to install.';
 
   @override
+  String get updatesUnsignedInstaller =>
+      'Installer is not signed. Automatic installation was blocked.';
+
+  @override
   String get resetSection => 'Reset';
 
   @override
@@ -690,4 +694,112 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get codexReasonFirewall =>
       'Network or VPN blocking access to chatgpt.com.';
+
+  @override
+  String get notificationEnabled => 'Keep status notification';
+
+  @override
+  String get notificationShowProvider => 'Show provider';
+
+  @override
+  String get notificationShowFiveHour => 'Show 5-hour usage';
+
+  @override
+  String get notificationShowWeekly => 'Show weekly usage';
+
+  @override
+  String get notificationPrivacy => 'Lock-screen privacy';
+
+  @override
+  String get notificationPrivacyFull => 'Account and usage';
+
+  @override
+  String get notificationPrivacyHideAccounts => 'Hide account names';
+
+  @override
+  String get notificationPrivacyHidden => 'Hide all usage';
+
+  @override
+  String get historyWindow => 'History';
+
+  @override
+  String get history24Hours => '24h';
+
+  @override
+  String get history7Days => '7d';
+
+  @override
+  String get history30Days => '30d';
+
+  @override
+  String get allAccountsFilter => 'All accounts';
+
+  @override
+  String get allProvidersFilter => 'All providers';
+
+  @override
+  String get providerOverview => 'Provider comparison';
+
+  @override
+  String get providerHealthy => 'Healthy';
+
+  @override
+  String get providerStale => 'Stale data';
+
+  @override
+  String get providerProblem => 'Needs attention';
+
+  @override
+  String get providerNoData => 'No data';
+
+  @override
+  String get manualReloginTooltip => 'Log in again';
+
+  @override
+  String get customLimitsTooltip => 'Custom limits';
+
+  @override
+  String customLimitsTitle(String account) {
+    return 'Custom limits for $account';
+  }
+
+  @override
+  String get customLimitsUseDefaults => 'Use global limits';
+
+  @override
+  String get deleteAllDataSection => 'Delete all data';
+
+  @override
+  String get deleteAllDataDescription =>
+      'Deletes accounts, sessions, encrypted credentials, history, notification records and settings from this device.';
+
+  @override
+  String get deleteAllDataButton => 'Delete all app data';
+
+  @override
+  String get deleteAllDataTitle => 'Delete all app data?';
+
+  @override
+  String get deleteAllDataBody =>
+      'You will need to sign in again. This cannot be undone.';
+
+  @override
+  String get deleteAllDataDone => 'All app data was deleted.';
+
+  @override
+  String get deleteAllDataConfirm => 'Delete everything';
+
+  @override
+  String get diagnosticsSafeDescription =>
+      'Shows account and refresh health only. Tokens, cookies and raw provider responses are never included.';
+
+  @override
+  String get taskerSection => 'Tasker';
+
+  @override
+  String get taskerDescription =>
+      'Send this broadcast from Tasker to open the app and run a rate-limited refresh.';
+
+  @override
+  String get taskerCopyAction => 'Copy broadcast action';
 }

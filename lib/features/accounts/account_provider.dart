@@ -1,10 +1,17 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/foundation.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:desktop_webview_window/desktop_webview_window.dart';
 
 import '../../core/models/app_settings.dart';
 import '../../core/models/claude_account.dart';
 import '../../core/models/provider_type.dart';
 import '../../core/models/usage_history_point.dart';
+import '../../core/models/usage_update.dart';
 import '../../core/notifications/usage_alert_service.dart';
+import '../../core/notifications/notification_service.dart';
 import '../../core/scraping/android_account_cookie_store.dart';
 import '../../core/scraping/usage_scraper.dart';
 import '../../core/storage/account_store.dart';
@@ -176,25 +183,30 @@ class AccountProvider extends ChangeNotifier {
       profile: accountId,
       providerType: account.providerType,
     );
+    final updated = applyUsageSnapshot(
+      account,
+      snapshot,
+      fetchedAt: DateTime.now(),
+    );
+    _updateAccount(accountId, (_) => updated);
+    await _persist(accountId);
+    final settings = _loadSettings();
+    await _alerts.checkProviderAvailability(
+      account: updated,
+      privacyMode: settings.pinnedNotificationPrivacyMode,
+    );
     if (snapshot.isAvailable) {
-      _updateAccount(
-        accountId,
-        (a) => a.copyWith(
-          lastKnownUsage: snapshot,
-          lastFetchedAt: DateTime.now(),
-          clearLastFetchError: true,
-          lastFetchSessionExpired: false,
-        ),
-      );
-      await _persist(accountId);
       final account = _accounts.firstWhere((a) => a.id == accountId);
-      final settings = _loadSettings();
       await _alerts.check(
         account: account,
         previous: previous,
         next: snapshot,
-        warningThreshold: settings.warningThresholdPercent,
-        criticalThreshold: settings.criticalThresholdPercent,
+        warningThreshold:
+            account.warningThresholdPercent ?? settings.warningThresholdPercent,
+        criticalThreshold:
+            account.criticalThresholdPercent ??
+            settings.criticalThresholdPercent,
+        privacyMode: settings.pinnedNotificationPrivacyMode,
       );
       await _history.append(
         accountId,
@@ -204,29 +216,46 @@ class AccountProvider extends ChangeNotifier {
           weeklyPercent: snapshot.weeklyPercent,
         ),
       );
-    } else if (snapshot.sessionExpired) {
-      _updateAccount(
-        accountId,
-        (a) => a.copyWith(
-          lastKnownUsage: snapshot,
-          lastFetchedAt: DateTime.now(),
-          clearLastFetchError: true,
-          lastFetchSessionExpired: true,
-        ),
-      );
-      await _persist(accountId);
-    } else {
-      _updateAccount(
-        accountId,
-        (a) => a.copyWith(
-          lastFetchedAt: DateTime.now(),
-          lastFetchError: snapshot.parseError ?? 'Unknown error',
-          lastFetchSessionExpired: false,
-        ),
-      );
-      await _persist(accountId);
     }
     await _publishNative();
+    notifyListeners();
+  }
+
+  Future<void> setAccountThresholds(
+    String accountId, {
+    int? warning,
+    int? critical,
+  }) async {
+    if (warning != null && critical != null && warning >= critical) return;
+    _updateAccount(
+      accountId,
+      (account) => warning == null || critical == null
+          ? account.copyWith(clearCustomThresholds: true)
+          : account.copyWith(
+              warningThresholdPercent: warning.clamp(1, 99),
+              criticalThresholdPercent: critical.clamp(2, 100),
+            ),
+    );
+    await _persist(accountId);
+    notifyListeners();
+  }
+
+  Future<void> clearAllData() async {
+    await _alerts.clearData();
+    await _history.clear();
+    await _store.clear();
+    await _settingsStore.clear();
+    await _androidCookies.deleteAll();
+    await const FlutterSecureStorage().deleteAll();
+    await NotificationService.instance.cancelAll();
+    await AndroidWidgetBridge.clear();
+    if (Platform.isAndroid) {
+      await CookieManager.instance().deleteAllCookies();
+      await WebStorageManager.instance().deleteAllData();
+    } else if (Platform.isLinux || Platform.isWindows || Platform.isMacOS) {
+      await WebviewWindow.clearAll();
+    }
+    _accounts = [];
     notifyListeners();
   }
 
@@ -254,6 +283,13 @@ class AccountProvider extends ChangeNotifier {
       _accounts,
       persistentNotificationAllAccounts: settings.pinnedNotificationAllAccounts,
       persistentNotificationAccountIds: settings.pinnedNotificationAccountIds,
+      persistentNotificationEnabled: settings.pinnedNotificationEnabled,
+      persistentNotificationShowProvider:
+          settings.pinnedNotificationShowProvider,
+      persistentNotificationShowFiveHour:
+          settings.pinnedNotificationShowFiveHour,
+      persistentNotificationShowWeekly: settings.pinnedNotificationShowWeekly,
+      persistentNotificationPrivacyMode: settings.pinnedNotificationPrivacyMode,
       widgetAllAccounts: settings.widgetAllAccounts,
       widgetAccountIds: settings.widgetAccountIds,
     );

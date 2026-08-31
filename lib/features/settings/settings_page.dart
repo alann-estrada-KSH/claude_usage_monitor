@@ -1,6 +1,7 @@
 import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
@@ -49,6 +50,11 @@ class SettingsPage extends StatelessWidget {
             _SectionCard(
               title: l10n.widgetSection,
               child: const _WidgetAccountsControl(),
+            ),
+            const SizedBox(height: 16),
+            _SectionCard(
+              title: l10n.taskerSection,
+              child: const _TaskerControl(),
             ),
             const SizedBox(height: 16),
           ],
@@ -101,16 +107,19 @@ class SettingsPage extends StatelessWidget {
             ),
             const SizedBox(height: 16),
           ],
-          _SectionCard(
-            title: l10n.debugModeSection,
-            child: const _DebugModeToggle(),
-          ),
-          if (debugMode) ...[
-            const SizedBox(height: 16),
+          if (kDebugMode)
             _SectionCard(
               title: l10n.diagnosticsSection,
               child: const _DiagnosticsPanel(),
             ),
+          if (kDebugMode) ...[
+            const SizedBox(height: 16),
+            _SectionCard(
+              title: l10n.debugModeSection,
+              child: const _DebugModeToggle(),
+            ),
+          ],
+          if (kDebugMode && debugMode) ...[
             const SizedBox(height: 16),
             _SectionCard(
               title: l10n.debugPanelSection,
@@ -127,6 +136,11 @@ class SettingsPage extends StatelessWidget {
           _SectionCard(
             title: l10n.resetSection,
             child: const _ResetSettingsControl(),
+          ),
+          const SizedBox(height: 16),
+          _SectionCard(
+            title: l10n.deleteAllDataSection,
+            child: const _DeleteAllDataControl(),
           ),
           const SizedBox(height: 16),
           const _AboutFooter(),
@@ -327,6 +341,7 @@ class _UpdatesControlState extends State<_UpdatesControl> {
   }
 
   Future<void> _downloadAndInstall() async {
+    final l10n = AppLocalizations.of(context)!;
     final update = _available;
     if (update == null) return;
     setState(() {
@@ -339,7 +354,21 @@ class _UpdatesControlState extends State<_UpdatesControl> {
         if (mounted) setState(() => _downloadProgress = p);
       },
     );
-    await _checker.runInstallerAndExit(installer);
+    if (!await _checker.isInstallerSigned(installer)) {
+      if (mounted) {
+        setState(() => _downloading = false);
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.updatesUnsignedInstaller)));
+      }
+      return;
+    }
+    if (!await _checker.runInstallerAndExit(installer) && mounted) {
+      setState(() => _downloading = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.updatesUnsignedInstaller)));
+    }
   }
 
   @override
@@ -610,8 +639,39 @@ class _PinnedNotificationControl extends StatelessWidget {
     );
     await AndroidWidgetBridge.publish(
       accounts.accounts,
+      persistentNotificationEnabled: settings.pinnedNotificationEnabled,
       persistentNotificationAllAccounts: allAccounts,
       persistentNotificationAccountIds: accountIds,
+      persistentNotificationShowProvider:
+          settings.pinnedNotificationShowProvider,
+      persistentNotificationShowFiveHour:
+          settings.pinnedNotificationShowFiveHour,
+      persistentNotificationShowWeekly: settings.pinnedNotificationShowWeekly,
+      persistentNotificationPrivacyMode: settings.pinnedNotificationPrivacyMode,
+    );
+  }
+
+  Future<void> _saveDisplay(
+    SettingsProvider settings,
+    AccountProvider accounts, {
+    bool? enabled,
+    bool? showProvider,
+    bool? showFiveHour,
+    bool? showWeekly,
+    String? privacyMode,
+  }) async {
+    await settings.setPinnedNotificationDisplay(
+      enabled: enabled,
+      showProvider: showProvider,
+      showFiveHour: showFiveHour,
+      showWeekly: showWeekly,
+      privacyMode: privacyMode,
+    );
+    await _save(
+      settings,
+      accounts,
+      settings.pinnedNotificationAllAccounts,
+      settings.pinnedNotificationAccountIds,
     );
   }
 
@@ -627,6 +687,62 @@ class _PinnedNotificationControl extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: Text(l10n.notificationEnabled),
+          value: settings.pinnedNotificationEnabled,
+          onChanged: (value) =>
+              _saveDisplay(settings, accounts, enabled: value),
+        ),
+        if (settings.pinnedNotificationEnabled) ...[
+          CheckboxListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(l10n.notificationShowProvider),
+            value: settings.pinnedNotificationShowProvider,
+            onChanged: (value) =>
+                _saveDisplay(settings, accounts, showProvider: value ?? true),
+          ),
+          CheckboxListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(l10n.notificationShowFiveHour),
+            value: settings.pinnedNotificationShowFiveHour,
+            onChanged: (value) =>
+                _saveDisplay(settings, accounts, showFiveHour: value ?? true),
+          ),
+          CheckboxListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(l10n.notificationShowWeekly),
+            value: settings.pinnedNotificationShowWeekly,
+            onChanged: (value) =>
+                _saveDisplay(settings, accounts, showWeekly: value ?? true),
+          ),
+          const SizedBox(height: 8),
+          Text(l10n.notificationPrivacy),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String>(
+            initialValue: settings.pinnedNotificationPrivacyMode,
+            items: [
+              DropdownMenuItem(
+                value: 'full',
+                child: Text(l10n.notificationPrivacyFull),
+              ),
+              DropdownMenuItem(
+                value: 'hideAccounts',
+                child: Text(l10n.notificationPrivacyHideAccounts),
+              ),
+              DropdownMenuItem(
+                value: 'hidden',
+                child: Text(l10n.notificationPrivacyHidden),
+              ),
+            ],
+            onChanged: (value) {
+              if (value != null) {
+                _saveDisplay(settings, accounts, privacyMode: value);
+              }
+            },
+          ),
+          const Divider(height: 28),
+        ],
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
           title: Text(l10n.pinnedNotificationAllAccounts),
@@ -668,6 +784,36 @@ class _PinnedNotificationControl extends StatelessWidget {
   }
 }
 
+class _TaskerControl extends StatelessWidget {
+  const _TaskerControl();
+
+  static const _action =
+      'com.claudeusagemonitor.claude_usage_monitor.TASKER_REFRESH';
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(l10n.taskerDescription),
+        const SizedBox(height: 8),
+        SelectableText(
+          _action,
+          style: const TextStyle(fontFamily: 'monospace'),
+        ),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          onPressed: () =>
+              Clipboard.setData(const ClipboardData(text: _action)),
+          icon: const Icon(Icons.copy),
+          label: Text(l10n.taskerCopyAction),
+        ),
+      ],
+    );
+  }
+}
+
 class _WidgetAccountsControl extends StatelessWidget {
   const _WidgetAccountsControl();
 
@@ -683,8 +829,15 @@ class _WidgetAccountsControl extends StatelessWidget {
     );
     await AndroidWidgetBridge.publish(
       accounts.accounts,
+      persistentNotificationEnabled: settings.pinnedNotificationEnabled,
       persistentNotificationAllAccounts: settings.pinnedNotificationAllAccounts,
       persistentNotificationAccountIds: settings.pinnedNotificationAccountIds,
+      persistentNotificationShowProvider:
+          settings.pinnedNotificationShowProvider,
+      persistentNotificationShowFiveHour:
+          settings.pinnedNotificationShowFiveHour,
+      persistentNotificationShowWeekly: settings.pinnedNotificationShowWeekly,
+      persistentNotificationPrivacyMode: settings.pinnedNotificationPrivacyMode,
       widgetAllAccounts: allAccounts,
       widgetAccountIds: accountIds,
     );
@@ -1031,7 +1184,7 @@ class _FocusModeAccountsControl extends StatelessWidget {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       buildDefaultDragHandles: false,
-      onReorder: provider.reorderAccounts,
+      onReorderItem: provider.reorderAccounts,
       children: [
         for (final account in provider.accounts)
           CheckboxListTile(
@@ -1084,6 +1237,8 @@ class _DiagnosticsPanelState extends State<_DiagnosticsPanel> {
           l10n.diagnosticsBackend(_backendName(l10n)),
           style: Theme.of(context).textTheme.bodySmall,
         ),
+        const SizedBox(height: 8),
+        Text(l10n.diagnosticsSafeDescription),
         const SizedBox(height: 12),
         FilledButton.tonalIcon(
           onPressed: _running ? null : () => _runDiagnostics(provider),
@@ -1349,6 +1504,58 @@ class _DebugPanelState extends State<_DebugPanel> {
               ),
             ),
           ),
+      ],
+    );
+  }
+}
+
+class _DeleteAllDataControl extends StatelessWidget {
+  const _DeleteAllDataControl();
+
+  Future<void> _confirm(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.deleteAllDataTitle),
+        content: Text(l10n.deleteAllDataBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(l10n.deleteAllDataConfirm),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+    final accountProvider = context.read<AccountProvider>();
+    final settingsProvider = context.read<SettingsProvider>();
+    await accountProvider.clearAllData();
+    await settingsProvider.clearAllData();
+    if (context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.deleteAllDataDone)));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(l10n.deleteAllDataDescription),
+        const SizedBox(height: 12),
+        FilledButton.tonalIcon(
+          onPressed: () => _confirm(context),
+          icon: const Icon(Icons.delete_forever_outlined),
+          label: Text(l10n.deleteAllDataButton),
+        ),
       ],
     );
   }

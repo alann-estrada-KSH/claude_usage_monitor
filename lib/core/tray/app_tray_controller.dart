@@ -64,11 +64,10 @@ class AppTrayController with TrayListener, WindowListener {
       await trayManager.setToolTip(tooltip);
       _initialized = true;
       await _rebuildMenu();
-    } catch (e) {
+    } catch (_) {
       // Missing system tray library, no tray host running (some minimal
       // WMs), or similar -- degrade to "just a normal window, no tray"
       // rather than taking the app down.
-      print('[AppTrayController] init failed, tray disabled: $e');
     }
   }
 
@@ -82,9 +81,7 @@ class AppTrayController with TrayListener, WindowListener {
     if (!_initialized) return;
     try {
       await trayManager.setToolTip(tooltip);
-    } catch (e) {
-      print('[AppTrayController] updateTooltip failed: $e');
-    }
+    } catch (_) {}
   }
 
   /// Shows current usage as disabled (non-clickable) lines at the top of
@@ -116,9 +113,7 @@ class AppTrayController with TrayListener, WindowListener {
           ],
         ),
       );
-    } catch (e) {
-      print('[AppTrayController] menu rebuild failed: $e');
-    }
+    } catch (_) {}
   }
 
   Future<void> dispose() async {

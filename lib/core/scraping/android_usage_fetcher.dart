@@ -13,7 +13,9 @@ Future<String> refreshAndroidCookieHeader(
   AndroidAccountCookieStore store, {
   AccountProviderType providerType = AccountProviderType.claude,
 }) {
-  return AndroidCookieJarLock.run(() => _refresh(accountId, store, providerType));
+  return AndroidCookieJarLock.run(
+    () => _refresh(accountId, store, providerType),
+  );
 }
 
 Future<String> _refresh(
@@ -53,7 +55,9 @@ Future<String> _refresh(
     await headless?.dispose();
   }
 
-  final cookies = await CookieManager.instance().getCookies(url: WebUri(domainUrl));
+  final cookies = await CookieManager.instance().getCookies(
+    url: WebUri(domainUrl),
+  );
   final refreshed = cookies.map((c) => '${c.name}=${c.value}').join('; ');
   if (refreshed.isEmpty) return stored;
   await store.save(accountId, refreshed);

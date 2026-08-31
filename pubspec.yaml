@@ -99,6 +99,8 @@ dependencies:
 
   # Long-press app icon shortcuts (Android / iOS).
   quick_actions: ^1.1.0
+  android_surface_bridge:
+    path: packages/android_surface_bridge
 
 dev_dependencies:
   flutter_test:

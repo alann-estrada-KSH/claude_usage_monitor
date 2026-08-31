@@ -29,4 +29,6 @@ class AppSettingsStore {
   Future<void> save(AppSettings settings) async {
     await _requireBox.put(_key, settings.toJson());
   }
+
+  Future<void> clear() => _requireBox.clear();
 }

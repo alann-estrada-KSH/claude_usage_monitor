@@ -181,6 +181,8 @@ class LocalApiService extends ChangeNotifier {
     notifyListeners();
   }
 
+  void forgetSecret() => _secret = null;
+
   Future<String?> readSecret() async {
     if (!isSupported) return null;
     _secret ??= await _secretStore.read();

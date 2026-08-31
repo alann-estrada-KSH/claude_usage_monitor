@@ -29,6 +29,9 @@ class ClaudeAccount {
     this.sortOrder = 0,
     this.lastFetchError,
     this.lastFetchSessionExpired = false,
+    this.consecutiveFailures = 0,
+    this.warningThresholdPercent,
+    this.criticalThresholdPercent,
   });
 
   final String id;
@@ -65,6 +68,13 @@ class ClaudeAccount {
   /// Cleared on the next successful fetch.
   final bool lastFetchSessionExpired;
 
+  /// Consecutive non-auth failures. Used for provider outage detection.
+  final int consecutiveFailures;
+
+  /// Optional account-specific alert thresholds. Null uses app defaults.
+  final int? warningThresholdPercent;
+  final int? criticalThresholdPercent;
+
   ClaudeAccount copyWith({
     String? apiAccountId,
     String? label,
@@ -77,6 +87,10 @@ class ClaudeAccount {
     String? lastFetchError,
     bool clearLastFetchError = false,
     bool? lastFetchSessionExpired,
+    int? consecutiveFailures,
+    int? warningThresholdPercent,
+    int? criticalThresholdPercent,
+    bool clearCustomThresholds = false,
   }) {
     return ClaudeAccount(
       id: id,
@@ -93,6 +107,13 @@ class ClaudeAccount {
           : (lastFetchError ?? this.lastFetchError),
       lastFetchSessionExpired:
           lastFetchSessionExpired ?? this.lastFetchSessionExpired,
+      consecutiveFailures: consecutiveFailures ?? this.consecutiveFailures,
+      warningThresholdPercent: clearCustomThresholds
+          ? null
+          : (warningThresholdPercent ?? this.warningThresholdPercent),
+      criticalThresholdPercent: clearCustomThresholds
+          ? null
+          : (criticalThresholdPercent ?? this.criticalThresholdPercent),
     );
   }
 
@@ -108,6 +129,9 @@ class ClaudeAccount {
     'sortOrder': sortOrder,
     'lastFetchError': lastFetchError,
     'lastFetchSessionExpired': lastFetchSessionExpired,
+    'consecutiveFailures': consecutiveFailures,
+    'warningThresholdPercent': warningThresholdPercent,
+    'criticalThresholdPercent': criticalThresholdPercent,
   };
 
   factory ClaudeAccount.fromJson(Map<String, dynamic> json) {
@@ -134,6 +158,9 @@ class ClaudeAccount {
       lastFetchError: json['lastFetchError'] as String?,
       lastFetchSessionExpired:
           json['lastFetchSessionExpired'] as bool? ?? false,
+      consecutiveFailures: json['consecutiveFailures'] as int? ?? 0,
+      warningThresholdPercent: json['warningThresholdPercent'] as int?,
+      criticalThresholdPercent: json['criticalThresholdPercent'] as int?,
     );
   }
 }

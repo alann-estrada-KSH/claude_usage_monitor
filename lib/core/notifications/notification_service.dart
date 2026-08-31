@@ -44,6 +44,34 @@ class NotificationService {
     return accounts.where((account) => selected.contains(account.id)).toList();
   }
 
+  static String buildPersistentBody(
+    List<ClaudeAccount> accounts, {
+    required String languageCode,
+    required String privacyMode,
+    required bool showProvider,
+    required bool showFiveHour,
+    required bool showWeekly,
+  }) {
+    final spanish = languageCode == 'es';
+    if (privacyMode == 'hidden') {
+      return spanish ? 'Datos de uso disponibles' : 'Usage data available';
+    }
+    return accounts
+        .map((account) {
+          final usage = account.lastKnownUsage;
+          final parts = <String>[
+            if (privacyMode != 'hideAccounts') account.label,
+            if (showProvider) account.providerType.displayName,
+            if (showFiveHour)
+              '5 h ${usage?.fiveHourPercent?.toStringAsFixed(0) ?? '--'}%',
+            if (showWeekly)
+              '7 d ${usage?.weeklyPercent?.toStringAsFixed(0) ?? '--'}%',
+          ];
+          return parts.join(' · ');
+        })
+        .join('\n');
+  }
+
   /// Lightweight init for the WorkManager background isolate -- skips
   /// permission requests (they require a UI) and only registers the plugin.
   Future<void> initBackground() async {
@@ -59,9 +87,7 @@ class NotificationService {
         ),
       );
       _initialized = true;
-    } catch (e) {
-      print('[NotificationService] background init failed: $e');
-    }
+    } catch (_) {}
   }
 
   Future<void> init() async {
@@ -96,11 +122,10 @@ class NotificationService {
         // whether it was actually granted and falls back gracefully if not.
         await androidPlugin?.requestExactAlarmsPermission();
       }
-    } catch (e) {
+    } catch (_) {
       // No notification daemon reachable over D-Bus (headless/minimal WM),
       // or some other platform quirk -- degrade to notifications simply not
       // firing rather than taking the whole app down at startup.
-      print('[NotificationService] init failed, notifications disabled: $e');
     }
   }
 
@@ -114,8 +139,7 @@ class NotificationService {
             AndroidFlutterLocalNotificationsPlugin
           >();
       return await androidPlugin?.areNotificationsEnabled();
-    } catch (e) {
-      print('[NotificationService] areNotificationsEnabled failed: $e');
+    } catch (_) {
       return null;
     }
   }
@@ -133,10 +157,19 @@ class NotificationService {
   /// known usage. It is intentionally separate from alert notifications.
   Future<void> updatePersistentUsage(
     List<ClaudeAccount> accounts, {
+    bool enabled = true,
     bool allAccounts = true,
     List<String> accountIds = const [],
+    bool showProvider = true,
+    bool showFiveHour = true,
+    bool showWeekly = true,
+    String privacyMode = 'full',
   }) async {
     if (!_initialized || !Platform.isAndroid) return;
+    if (!enabled) {
+      await cancel(_persistentUsageId);
+      return;
+    }
     final selected = selectPersistentAccounts(
       accounts,
       allAccounts: allAccounts,
@@ -149,22 +182,20 @@ class NotificationService {
     final lang = PlatformDispatcher.instance.locale.languageCode == 'es'
         ? 'es'
         : 'en';
-    final lines = selected
-        .map((account) {
-          final usage = account.lastKnownUsage;
-          final five = usage?.fiveHourPercent?.toStringAsFixed(0) ?? '--';
-          final weekly = usage?.weeklyPercent?.toStringAsFixed(0) ?? '--';
-          return lang == 'es'
-              ? '${account.label}: sesión $five% · semanal $weekly%'
-              : '${account.label}: session $five% · weekly $weekly%';
-        })
-        .join('\n');
+    final lines = buildPersistentBody(
+      selected,
+      languageCode: lang,
+      privacyMode: privacyMode,
+      showProvider: showProvider,
+      showFiveHour: showFiveHour,
+      showWeekly: showWeekly,
+    );
     try {
       await _plugin.show(
         _persistentUsageId,
         lang == 'es' ? 'Monitor de uso' : 'Usage Monitor',
         lines,
-        const NotificationDetails(
+        NotificationDetails(
           android: AndroidNotificationDetails(
             'usage_status',
             'Usage status',
@@ -176,12 +207,11 @@ class NotificationService {
             onlyAlertOnce: true,
             showWhen: false,
             category: AndroidNotificationCategory.status,
+            styleInformation: BigTextStyleInformation(lines),
           ),
         ),
       );
-    } catch (e) {
-      print('[NotificationService] persistent usage update failed: $e');
-    }
+    } catch (_) {}
   }
 
   Future<void> _showThrottled(String title, String body) async {
@@ -210,9 +240,7 @@ class NotificationService {
           linux: LinuxNotificationDetails(),
         ),
       );
-    } catch (e) {
-      print('[NotificationService] show failed: $e');
-    }
+    } catch (_) {}
   }
 
   /// Cancels a previously-scheduled notification by [id]. No-op if none exists.
@@ -220,18 +248,21 @@ class NotificationService {
     if (!_initialized) return;
     try {
       await _plugin.cancel(id);
-    } catch (e) {
-      print('[NotificationService] cancel($id) failed: $e');
-    }
+    } catch (_) {}
   }
 
   Future<void> cancel(int id) async {
     if (!_initialized) return;
     try {
       await _plugin.cancel(id);
-    } catch (e) {
-      print('[NotificationService] cancel($id) failed: $e');
-    }
+    } catch (_) {}
+  }
+
+  Future<void> cancelAll() async {
+    if (!_initialized) return;
+    try {
+      await _plugin.cancelAll();
+    } catch (_) {}
   }
 
   /// Schedules a notification to fire at [when] (absolute local time).
@@ -281,9 +312,7 @@ class NotificationService {
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
       );
-    } catch (e) {
-      print('[NotificationService] scheduleAt failed: $e');
-    }
+    } catch (_) {}
   }
 
   /// Schedules (rather than fires immediately) a test notification -- lets
@@ -331,8 +360,6 @@ class NotificationService {
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
       );
-    } catch (e) {
-      print('[NotificationService] scheduleTest failed: $e');
-    }
+    } catch (_) {}
   }
 }

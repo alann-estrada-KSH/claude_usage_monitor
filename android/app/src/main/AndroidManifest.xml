@@ -27,6 +27,8 @@
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
     <uses-permission android:name="android.permission.VIBRATE"/>
     <application
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
         android:label="@string/app_name"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
@@ -104,6 +106,20 @@
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
                 <action android:name="android.intent.action.QUICKBOOT_POWERON" />
                 <action android:name="com.htc.intent.action.QUICKBOOT_POWERON"/>
+            </intent-filter>
+        </receiver>
+        <receiver
+            android:name=".UsageSurfaceUpdateReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.claudeusagemonitor.claude_usage_monitor.UPDATE_SURFACES" />
+            </intent-filter>
+        </receiver>
+        <receiver
+            android:name=".TaskerRefreshReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.claudeusagemonitor.claude_usage_monitor.TASKER_REFRESH" />
             </intent-filter>
         </receiver>
     </application>

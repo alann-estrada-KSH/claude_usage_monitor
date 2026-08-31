@@ -28,15 +28,23 @@ class UsageHistoryStore {
   List<UsageHistoryPoint> forAccount(String accountId) {
     final raw = _requireBox.get(accountId) ?? const [];
     return raw
-        .map((e) => UsageHistoryPoint.fromJson(Map<String, dynamic>.from(e as Map)))
+        .map(
+          (e) =>
+              UsageHistoryPoint.fromJson(Map<String, dynamic>.from(e as Map)),
+        )
         .toList();
   }
 
   Future<void> append(String accountId, UsageHistoryPoint point) async {
     final cutoff = DateTime.now().subtract(_window);
-    final kept = forAccount(accountId).where((p) => p.timestamp.isAfter(cutoff)).toList()
-      ..add(point);
-    final trimmed = kept.length > _maxPoints ? kept.sublist(kept.length - _maxPoints) : kept;
+    final kept = forAccount(
+      accountId,
+    ).where((p) => p.timestamp.isAfter(cutoff)).toList()..add(point);
+    final trimmed = kept.length > _maxPoints
+        ? kept.sublist(kept.length - _maxPoints)
+        : kept;
     await _requireBox.put(accountId, trimmed.map((p) => p.toJson()).toList());
   }
+
+  Future<void> clear() => _requireBox.clear();
 }

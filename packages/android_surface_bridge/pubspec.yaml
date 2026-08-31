@@ -1,0 +1,16 @@
+name: android_surface_bridge
+description: Native update bridge for widgets and Wear OS surfaces.
+publish_to: none
+version: 1.0.0
+environment:
+  sdk: ^3.12.2
+  flutter: '>=3.35.0'
+dependencies:
+  flutter:
+    sdk: flutter
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: com.claudeusagemonitor.android_surface_bridge
+        pluginClass: AndroidSurfaceBridgePlugin

@@ -1124,6 +1124,12 @@ abstract class AppLocalizations {
   /// **'Downloading... the app will close to install.'**
   String get updatesDownloading;
 
+  /// No description provided for @updatesUnsignedInstaller.
+  ///
+  /// In en, this message translates to:
+  /// **'Installer is not signed. Automatic installation was blocked.'**
+  String get updatesUnsignedInstaller;
+
   /// No description provided for @resetSection.
   ///
   /// In en, this message translates to:
@@ -1303,6 +1309,210 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Network or VPN blocking access to chatgpt.com.'**
   String get codexReasonFirewall;
+
+  /// No description provided for @notificationEnabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep status notification'**
+  String get notificationEnabled;
+
+  /// No description provided for @notificationShowProvider.
+  ///
+  /// In en, this message translates to:
+  /// **'Show provider'**
+  String get notificationShowProvider;
+
+  /// No description provided for @notificationShowFiveHour.
+  ///
+  /// In en, this message translates to:
+  /// **'Show 5-hour usage'**
+  String get notificationShowFiveHour;
+
+  /// No description provided for @notificationShowWeekly.
+  ///
+  /// In en, this message translates to:
+  /// **'Show weekly usage'**
+  String get notificationShowWeekly;
+
+  /// No description provided for @notificationPrivacy.
+  ///
+  /// In en, this message translates to:
+  /// **'Lock-screen privacy'**
+  String get notificationPrivacy;
+
+  /// No description provided for @notificationPrivacyFull.
+  ///
+  /// In en, this message translates to:
+  /// **'Account and usage'**
+  String get notificationPrivacyFull;
+
+  /// No description provided for @notificationPrivacyHideAccounts.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide account names'**
+  String get notificationPrivacyHideAccounts;
+
+  /// No description provided for @notificationPrivacyHidden.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide all usage'**
+  String get notificationPrivacyHidden;
+
+  /// No description provided for @historyWindow.
+  ///
+  /// In en, this message translates to:
+  /// **'History'**
+  String get historyWindow;
+
+  /// No description provided for @history24Hours.
+  ///
+  /// In en, this message translates to:
+  /// **'24h'**
+  String get history24Hours;
+
+  /// No description provided for @history7Days.
+  ///
+  /// In en, this message translates to:
+  /// **'7d'**
+  String get history7Days;
+
+  /// No description provided for @history30Days.
+  ///
+  /// In en, this message translates to:
+  /// **'30d'**
+  String get history30Days;
+
+  /// No description provided for @allAccountsFilter.
+  ///
+  /// In en, this message translates to:
+  /// **'All accounts'**
+  String get allAccountsFilter;
+
+  /// No description provided for @allProvidersFilter.
+  ///
+  /// In en, this message translates to:
+  /// **'All providers'**
+  String get allProvidersFilter;
+
+  /// No description provided for @providerOverview.
+  ///
+  /// In en, this message translates to:
+  /// **'Provider comparison'**
+  String get providerOverview;
+
+  /// No description provided for @providerHealthy.
+  ///
+  /// In en, this message translates to:
+  /// **'Healthy'**
+  String get providerHealthy;
+
+  /// No description provided for @providerStale.
+  ///
+  /// In en, this message translates to:
+  /// **'Stale data'**
+  String get providerStale;
+
+  /// No description provided for @providerProblem.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs attention'**
+  String get providerProblem;
+
+  /// No description provided for @providerNoData.
+  ///
+  /// In en, this message translates to:
+  /// **'No data'**
+  String get providerNoData;
+
+  /// No description provided for @manualReloginTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Log in again'**
+  String get manualReloginTooltip;
+
+  /// No description provided for @customLimitsTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom limits'**
+  String get customLimitsTooltip;
+
+  /// No description provided for @customLimitsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom limits for {account}'**
+  String customLimitsTitle(String account);
+
+  /// No description provided for @customLimitsUseDefaults.
+  ///
+  /// In en, this message translates to:
+  /// **'Use global limits'**
+  String get customLimitsUseDefaults;
+
+  /// No description provided for @deleteAllDataSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete all data'**
+  String get deleteAllDataSection;
+
+  /// No description provided for @deleteAllDataDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Deletes accounts, sessions, encrypted credentials, history, notification records and settings from this device.'**
+  String get deleteAllDataDescription;
+
+  /// No description provided for @deleteAllDataButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete all app data'**
+  String get deleteAllDataButton;
+
+  /// No description provided for @deleteAllDataTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete all app data?'**
+  String get deleteAllDataTitle;
+
+  /// No description provided for @deleteAllDataBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You will need to sign in again. This cannot be undone.'**
+  String get deleteAllDataBody;
+
+  /// No description provided for @deleteAllDataDone.
+  ///
+  /// In en, this message translates to:
+  /// **'All app data was deleted.'**
+  String get deleteAllDataDone;
+
+  /// No description provided for @deleteAllDataConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete everything'**
+  String get deleteAllDataConfirm;
+
+  /// No description provided for @diagnosticsSafeDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Shows account and refresh health only. Tokens, cookies and raw provider responses are never included.'**
+  String get diagnosticsSafeDescription;
+
+  /// No description provided for @taskerSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Tasker'**
+  String get taskerSection;
+
+  /// No description provided for @taskerDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Send this broadcast from Tasker to open the app and run a rate-limited refresh.'**
+  String get taskerDescription;
+
+  /// No description provided for @taskerCopyAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy broadcast action'**
+  String get taskerCopyAction;
 }
 
 class _AppLocalizationsDelegate

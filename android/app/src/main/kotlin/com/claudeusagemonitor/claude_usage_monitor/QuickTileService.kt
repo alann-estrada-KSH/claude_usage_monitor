@@ -36,7 +36,7 @@ class QuickTileService : TileService() {
                 }
                 else -> {
                     tile.contentDescription = getString(
-                        R.string.widget_usage_format,
+                        if (account.stale) R.string.widget_usage_stale_format else R.string.widget_usage_format,
                         account.fiveHour.toInt(),
                         account.weekly.toInt(),
                     )

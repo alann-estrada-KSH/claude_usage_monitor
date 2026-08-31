@@ -35,4 +35,6 @@ class AccountStore {
   Future<void> delete(String accountId) async {
     await _requireBox.delete(accountId);
   }
+
+  Future<void> clear() => _requireBox.clear();
 }

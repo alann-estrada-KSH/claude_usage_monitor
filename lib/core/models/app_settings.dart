@@ -24,6 +24,11 @@ class AppSettings {
     this.localApiRateLimitPerMinute = 60,
     this.pinnedNotificationAllAccounts = true,
     this.pinnedNotificationAccountIds = const [],
+    this.pinnedNotificationEnabled = true,
+    this.pinnedNotificationShowProvider = true,
+    this.pinnedNotificationShowFiveHour = true,
+    this.pinnedNotificationShowWeekly = true,
+    this.pinnedNotificationPrivacyMode = 'full',
     this.widgetAllAccounts = true,
     this.widgetAccountIds = const [],
   });
@@ -78,6 +83,13 @@ class AppSettings {
   /// legacy behavior of showing every account.
   final bool pinnedNotificationAllAccounts;
   final List<String> pinnedNotificationAccountIds;
+  final bool pinnedNotificationEnabled;
+  final bool pinnedNotificationShowProvider;
+  final bool pinnedNotificationShowFiveHour;
+  final bool pinnedNotificationShowWeekly;
+
+  /// One of [notificationPrivacyModes].
+  final String pinnedNotificationPrivacyMode;
 
   /// Android-only widget selection. `true` preserves showing every account.
   final bool widgetAllAccounts;
@@ -94,6 +106,7 @@ class AppSettings {
   static const maxLocalApiRateLimitPerMinute = 600;
   static const minFloatingWindowOpacity = 0.45;
   static const maxFloatingWindowOpacity = 1.0;
+  static const notificationPrivacyModes = ['full', 'hideAccounts', 'hidden'];
 
   /// Claude's own brand orange -- matches claude.ai's real accent color.
   static const defaultAccentColor = 0xFFD97757;
@@ -131,6 +144,11 @@ class AppSettings {
     int? localApiRateLimitPerMinute,
     bool? pinnedNotificationAllAccounts,
     List<String>? pinnedNotificationAccountIds,
+    bool? pinnedNotificationEnabled,
+    bool? pinnedNotificationShowProvider,
+    bool? pinnedNotificationShowFiveHour,
+    bool? pinnedNotificationShowWeekly,
+    String? pinnedNotificationPrivacyMode,
     bool? widgetAllAccounts,
     List<String>? widgetAccountIds,
   }) {
@@ -171,6 +189,16 @@ class AppSettings {
           pinnedNotificationAllAccounts ?? this.pinnedNotificationAllAccounts,
       pinnedNotificationAccountIds:
           pinnedNotificationAccountIds ?? this.pinnedNotificationAccountIds,
+      pinnedNotificationEnabled:
+          pinnedNotificationEnabled ?? this.pinnedNotificationEnabled,
+      pinnedNotificationShowProvider:
+          pinnedNotificationShowProvider ?? this.pinnedNotificationShowProvider,
+      pinnedNotificationShowFiveHour:
+          pinnedNotificationShowFiveHour ?? this.pinnedNotificationShowFiveHour,
+      pinnedNotificationShowWeekly:
+          pinnedNotificationShowWeekly ?? this.pinnedNotificationShowWeekly,
+      pinnedNotificationPrivacyMode:
+          pinnedNotificationPrivacyMode ?? this.pinnedNotificationPrivacyMode,
       widgetAllAccounts: widgetAllAccounts ?? this.widgetAllAccounts,
       widgetAccountIds: widgetAccountIds ?? this.widgetAccountIds,
     );
@@ -199,6 +227,11 @@ class AppSettings {
     'localApiRateLimitPerMinute': localApiRateLimitPerMinute,
     'pinnedNotificationAllAccounts': pinnedNotificationAllAccounts,
     'pinnedNotificationAccountIds': pinnedNotificationAccountIds,
+    'pinnedNotificationEnabled': pinnedNotificationEnabled,
+    'pinnedNotificationShowProvider': pinnedNotificationShowProvider,
+    'pinnedNotificationShowFiveHour': pinnedNotificationShowFiveHour,
+    'pinnedNotificationShowWeekly': pinnedNotificationShowWeekly,
+    'pinnedNotificationPrivacyMode': pinnedNotificationPrivacyMode,
     'widgetAllAccounts': widgetAllAccounts,
     'widgetAccountIds': widgetAccountIds,
   };
@@ -251,10 +284,27 @@ class AppSettings {
       pinnedNotificationAccountIds: _stringList(
         json['pinnedNotificationAccountIds'],
       ),
+      pinnedNotificationEnabled:
+          json['pinnedNotificationEnabled'] as bool? ?? true,
+      pinnedNotificationShowProvider:
+          json['pinnedNotificationShowProvider'] as bool? ?? true,
+      pinnedNotificationShowFiveHour:
+          json['pinnedNotificationShowFiveHour'] as bool? ?? true,
+      pinnedNotificationShowWeekly:
+          json['pinnedNotificationShowWeekly'] as bool? ?? true,
+      pinnedNotificationPrivacyMode: _privacyMode(
+        json['pinnedNotificationPrivacyMode'],
+      ),
       widgetAllAccounts: json['widgetAllAccounts'] as bool? ?? true,
       widgetAccountIds: _stringList(json['widgetAccountIds']),
     );
   }
+}
+
+String _privacyMode(Object? value) {
+  return AppSettings.notificationPrivacyModes.contains(value)
+      ? value as String
+      : 'full';
 }
 
 int _boundedInt(Object? value, int fallback, int min, int max) {

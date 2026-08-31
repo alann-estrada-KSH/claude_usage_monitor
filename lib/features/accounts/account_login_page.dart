@@ -4,7 +4,6 @@ import 'dart:io';
 
 import 'package:desktop_webview_window/desktop_webview_window.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
 import '../../core/models/provider_type.dart';
@@ -49,27 +48,15 @@ class _AccountLoginPageState extends State<AccountLoginPage> {
   bool get _isAntigravity =>
       widget.providerType == AccountProviderType.antigravity;
   final _manualTokenController = TextEditingController();
-  final List<String> _logs = [];
 
   bool _confirming = false;
   bool _androidReadyToLoad = false;
   CreateWindowAction? _googlePopupRequest;
   void Function()? _releaseAndroidLock;
 
-  void _log(String msg) {
-    final entry =
-        '[${DateTime.now().toIso8601String().substring(11, 19)}] $msg';
-    print(entry);
-    _logs.add(entry);
-  }
-
   @override
   void initState() {
     super.initState();
-    _log(
-      'Iniciando login para ${widget.providerType.displayName} (profile=${widget.profile})',
-    );
-    _log('URL Inicial: ${widget.providerType.defaultLoginUrl}');
     if (!Platform.isAndroid) {
       _openDesktopLoginWindow();
     } else {
@@ -82,7 +69,6 @@ class _AccountLoginPageState extends State<AccountLoginPage> {
     await CookieManager.instance().deleteAllCookies();
     await WebStorageManager.instance().deleteAllData();
     if (mounted) setState(() => _androidReadyToLoad = true);
-    _log('Android WebView preparado y limpio');
   }
 
   Future<void> _openDesktopLoginWindow() async {
@@ -97,7 +83,6 @@ class _AccountLoginPageState extends State<AccountLoginPage> {
         ),
       );
       webview.setOnUrlRequestCallback((url) {
-        _log('Desktop webview url requested: $url');
         _checkUrlForToken(WebUri(url));
         if ((_isAntigravity && url.contains('code=')) ||
             url.contains('localhost') ||
@@ -123,7 +108,6 @@ class _AccountLoginPageState extends State<AccountLoginPage> {
   Future<void> _checkUrlForToken(WebUri? url) async {
     if (url == null) return;
     final urlStr = url.toString();
-    _log('URL detectada: $urlStr');
 
     if (widget.providerType == AccountProviderType.openCodeGo) {
       final workspaceMatch = RegExp(
@@ -133,7 +117,6 @@ class _AccountLoginPageState extends State<AccountLoginPage> {
       if (workspaceMatch != null && profile != null) {
         final workspaceId = workspaceMatch.group(1)!;
         await _openCodeWorkspaces.save(profile, workspaceId);
-        _log('OpenCode Go workspace detectado y guardado: $workspaceId');
       }
     }
 
@@ -158,13 +141,9 @@ class _AccountLoginPageState extends State<AccountLoginPage> {
 
     if (matchToken != null) {
       final token = Uri.decodeComponent(matchToken.group(1)!);
-      _log(
-        'Implicit Access Token extraído de URL: ${token.substring(0, token.length > 10 ? 10 : token.length)}...',
-      );
       final profile = widget.profile;
       if (profile != null) {
         await _androidCookies.save(profile, 'Bearer $token');
-        _log('Bearer token guardado en Secure Storage para perfil $profile');
       }
       if (mounted) Navigator.of(context).pop(true);
       return;
@@ -174,17 +153,11 @@ class _AccountLoginPageState extends State<AccountLoginPage> {
       final code = Uri.decodeComponent(matchCode.group(1)!);
       if (_handledCode == code) return;
       _handledCode = code;
-      _log(
-        'Código OAuth detectado: ${code.substring(0, code.length > 10 ? 10 : code.length)}...',
-      );
       await _exchangeCodeForToken(code);
     }
   }
 
   Future<void> _exchangeCodeForToken(String code) async {
-    _log(
-      'Iniciando intercambio de código en https://oauth2.googleapis.com/token...',
-    );
     final client = HttpClient();
     try {
       final req = await client.postUrl(
@@ -214,27 +187,23 @@ class _AccountLoginPageState extends State<AccountLoginPage> {
       req.write(body);
       final res = await req.close();
       final resBody = await res.transform(utf8.decoder).join();
-      _log('Respuesta Token Exchange (HTTP ${res.statusCode}): $resBody');
       if (res.statusCode == 200) {
         final json = jsonDecode(resBody);
         if (json is Map && json.containsKey('access_token')) {
           final profile = widget.profile;
           if (profile != null) {
             await _androidCookies.save(profile, resBody);
-            _log('Token intercambiado guardado con éxito!');
           }
           if (mounted) Navigator.of(context).pop(true);
         }
       }
-    } catch (e) {
-      _log('Error en intercambio de código: $e');
+    } catch (_) {
     } finally {
       client.close(force: true);
     }
   }
 
   Future<void> _confirmDone() async {
-    _log('_confirmDone presionado');
     if (_confirming) return;
     _confirming = true;
     try {
@@ -243,7 +212,6 @@ class _AccountLoginPageState extends State<AccountLoginPage> {
 
       if (profile != null && manualToken.isNotEmpty) {
         await _androidCookies.save(profile, manualToken);
-        _log('Guardado token ingresado manualmente');
         if (mounted) Navigator.of(context).pop(true);
         return;
       }
@@ -251,7 +219,6 @@ class _AccountLoginPageState extends State<AccountLoginPage> {
       if (Platform.isAndroid) {
         if (profile != null) {
           final existing = await _androidCookies.read(profile);
-          _log('Token existente en storage: $existing');
           final isOAuthToken =
               existing != null &&
               (existing.startsWith('Bearer ') ||
@@ -264,55 +231,17 @@ class _AccountLoginPageState extends State<AccountLoginPage> {
             final header = cookies
                 .map((c) => '${c.name}=${c.value}')
                 .join('; ');
-            _log('Guardando cookies web generales (${cookies.length} cookies)');
             if (header.isNotEmpty) await _androidCookies.save(profile, header);
-          } else {
-            _log(
-              'Se conserva el OAuth token existente sin sobrescribirlo con cookies',
-            );
           }
         }
         if (mounted) Navigator.of(context).pop(true);
       } else {
         _desktopWebview?.close();
+        if (mounted) Navigator.of(context).pop(true);
       }
     } finally {
       _confirming = false;
     }
-  }
-
-  void _showDebugDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Logs de Depuración / Debug Logs'),
-        content: SizedBox(
-          width: double.maxFinite,
-          height: 350,
-          child: SingleChildScrollView(
-            child: SelectableText(
-              _logs.isEmpty ? 'Sin registros aún' : _logs.join('\n'),
-              style: const TextStyle(fontFamily: 'monospace', fontSize: 11),
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Clipboard.setData(ClipboardData(text: _logs.join('\n')));
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Logs copiados al portapapeles')),
-              );
-            },
-            child: const Text('Copiar Logs'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cerrar'),
-          ),
-        ],
-      ),
-    );
   }
 
   @override
@@ -333,11 +262,6 @@ class _AccountLoginPageState extends State<AccountLoginPage> {
           '${l10n.loginPageTitle} (${widget.providerType.displayName})',
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.bug_report),
-            tooltip: 'Debug Logs',
-            onPressed: _showDebugDialog,
-          ),
           Padding(
             padding: const EdgeInsets.only(right: 12),
             child: FilledButton.icon(
@@ -371,6 +295,9 @@ class _AccountLoginPageState extends State<AccountLoginPage> {
               TextField(
                 controller: _manualTokenController,
                 maxLines: 2,
+                obscureText: true,
+                enableSuggestions: false,
+                autocorrect: false,
                 style: const TextStyle(fontSize: 12),
                 decoration: const InputDecoration(
                   hintText:

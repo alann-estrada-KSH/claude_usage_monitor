@@ -28,7 +28,9 @@ class OfflineBanner extends StatelessWidget {
           Expanded(
             child: Text(
               l10n.offlineMessage,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: colors.error),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: colors.error),
               overflow: TextOverflow.ellipsis,
             ),
           ),
