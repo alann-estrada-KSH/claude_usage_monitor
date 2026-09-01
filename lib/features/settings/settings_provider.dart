@@ -23,6 +23,7 @@ class SettingsProvider extends ChangeNotifier {
   bool get use24HourFormat => _settings.use24HourFormat;
   int get accentColor => _settings.accentColor;
   String get fontChoice => _settings.fontChoice;
+  bool get showUsageGraphs => _settings.showUsageGraphs;
   int get statusRefreshIntervalSeconds =>
       _settings.statusRefreshIntervalSeconds;
   bool get debugMode => _settings.debugMode;
@@ -51,6 +52,7 @@ class SettingsProvider extends ChangeNotifier {
       _settings.pinnedNotificationShowFiveHour;
   bool get pinnedNotificationShowWeekly =>
       _settings.pinnedNotificationShowWeekly;
+  bool get pinnedNotificationCompact => _settings.pinnedNotificationCompact;
   String get pinnedNotificationPrivacyMode =>
       _settings.pinnedNotificationPrivacyMode;
   bool get widgetAllAccounts => _settings.widgetAllAccounts;
@@ -88,6 +90,12 @@ class SettingsProvider extends ChangeNotifier {
 
   Future<void> setThemeMode(ThemeMode mode) async {
     _settings = _settings.copyWith(themeMode: mode);
+    await _store.save(_settings);
+    notifyListeners();
+  }
+
+  Future<void> setShowUsageGraphs(bool value) async {
+    _settings = _settings.copyWith(showUsageGraphs: value);
     await _store.save(_settings);
     notifyListeners();
   }
@@ -218,6 +226,7 @@ class SettingsProvider extends ChangeNotifier {
     bool? showProvider,
     bool? showFiveHour,
     bool? showWeekly,
+    bool? compact,
     String? privacyMode,
   }) async {
     if (privacyMode != null &&
@@ -229,6 +238,7 @@ class SettingsProvider extends ChangeNotifier {
       pinnedNotificationShowProvider: showProvider,
       pinnedNotificationShowFiveHour: showFiveHour,
       pinnedNotificationShowWeekly: showWeekly,
+      pinnedNotificationCompact: compact,
       pinnedNotificationPrivacyMode: privacyMode,
     );
     await _store.save(_settings);

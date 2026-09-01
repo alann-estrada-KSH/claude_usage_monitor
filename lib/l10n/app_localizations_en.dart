@@ -224,6 +224,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appearanceSection => 'Appearance';
 
   @override
+  String get usageDisplaySection => 'Usage display';
+
+  @override
+  String get showUsageGraphs => 'Show usage graphs';
+
+  @override
+  String get showUsageGraphsDescription =>
+      'Hides bars, sparklines, and history while keeping percentages and resets.';
+
+  @override
   String get themeSystem => 'System';
 
   @override
@@ -706,6 +716,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get notificationShowWeekly => 'Show weekly usage';
+
+  @override
+  String get notificationCompact => 'Show percentages only';
+
+  @override
+  String get notificationCompactDescription =>
+      'Hides providers and keeps a short per-account view.';
 
   @override
   String get notificationPrivacy => 'Lock-screen privacy';

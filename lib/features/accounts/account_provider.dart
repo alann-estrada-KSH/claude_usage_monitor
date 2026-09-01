@@ -290,6 +290,7 @@ class AccountProvider extends ChangeNotifier {
       persistentNotificationShowFiveHour:
           settings.pinnedNotificationShowFiveHour,
       persistentNotificationShowWeekly: settings.pinnedNotificationShowWeekly,
+      persistentNotificationCompact: settings.pinnedNotificationCompact,
       persistentNotificationPrivacyMode: settings.pinnedNotificationPrivacyMode,
       widgetAllAccounts: settings.widgetAllAccounts,
       widgetAccountIds: settings.widgetAccountIds,

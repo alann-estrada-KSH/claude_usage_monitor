@@ -3,9 +3,12 @@
 All notable changes to this project are documented here, one entry per
 tagged release. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
-## [Unreleased]
+## [1.4.13] - 2026-08-31
 
-No changes yet.
+- fix: prevent Wear OS launch crashes from malformed or stale synced payloads
+- feat: add contextual Android usage notifications with compact percentage-only mode
+- feat: add optional dashboard view without bars, sparklines, or history graphs
+- test: cover notification privacy, compact content, and persisted display settings
 
 ## [1.4.12] - 2026-08-31
 

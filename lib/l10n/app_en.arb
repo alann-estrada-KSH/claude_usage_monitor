@@ -129,6 +129,9 @@
     }
   },
   "appearanceSection": "Appearance",
+  "usageDisplaySection": "Usage display",
+  "showUsageGraphs": "Show usage graphs",
+  "showUsageGraphsDescription": "Hides bars, sparklines, and history while keeping percentages and resets.",
   "themeSystem": "System",
   "themeLight": "Light",
   "themeDark": "Dark",
@@ -305,6 +308,8 @@
   "notificationShowProvider": "Show provider",
   "notificationShowFiveHour": "Show 5-hour usage",
   "notificationShowWeekly": "Show weekly usage",
+  "notificationCompact": "Show percentages only",
+  "notificationCompactDescription": "Hides providers and keeps a short per-account view.",
   "notificationPrivacy": "Lock-screen privacy",
   "notificationPrivacyFull": "Account and usage",
   "notificationPrivacyHideAccounts": "Hide account names",

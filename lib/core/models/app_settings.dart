@@ -8,6 +8,7 @@ class AppSettings {
     this.use24HourFormat = false,
     this.accentColor = defaultAccentColor,
     this.fontChoice = defaultFontChoice,
+    this.showUsageGraphs = true,
     this.statusRefreshIntervalSeconds = 3600,
     this.debugMode = false,
     this.warningThresholdPercent = 80,
@@ -28,6 +29,7 @@ class AppSettings {
     this.pinnedNotificationShowProvider = true,
     this.pinnedNotificationShowFiveHour = true,
     this.pinnedNotificationShowWeekly = true,
+    this.pinnedNotificationCompact = false,
     this.pinnedNotificationPrivacyMode = 'full',
     this.widgetAllAccounts = true,
     this.widgetAccountIds = const [],
@@ -47,6 +49,7 @@ class AppSettings {
 
   /// One of [fontChoices].
   final String fontChoice;
+  final bool showUsageGraphs;
 
   final int statusRefreshIntervalSeconds;
 
@@ -87,6 +90,7 @@ class AppSettings {
   final bool pinnedNotificationShowProvider;
   final bool pinnedNotificationShowFiveHour;
   final bool pinnedNotificationShowWeekly;
+  final bool pinnedNotificationCompact;
 
   /// One of [notificationPrivacyModes].
   final String pinnedNotificationPrivacyMode;
@@ -128,6 +132,7 @@ class AppSettings {
     bool? use24HourFormat,
     int? accentColor,
     String? fontChoice,
+    bool? showUsageGraphs,
     int? statusRefreshIntervalSeconds,
     bool? debugMode,
     int? warningThresholdPercent,
@@ -148,6 +153,7 @@ class AppSettings {
     bool? pinnedNotificationShowProvider,
     bool? pinnedNotificationShowFiveHour,
     bool? pinnedNotificationShowWeekly,
+    bool? pinnedNotificationCompact,
     String? pinnedNotificationPrivacyMode,
     bool? widgetAllAccounts,
     List<String>? widgetAccountIds,
@@ -162,6 +168,7 @@ class AppSettings {
       use24HourFormat: use24HourFormat ?? this.use24HourFormat,
       accentColor: accentColor ?? this.accentColor,
       fontChoice: fontChoice ?? this.fontChoice,
+      showUsageGraphs: showUsageGraphs ?? this.showUsageGraphs,
       statusRefreshIntervalSeconds:
           statusRefreshIntervalSeconds ?? this.statusRefreshIntervalSeconds,
       debugMode: debugMode ?? this.debugMode,
@@ -197,6 +204,8 @@ class AppSettings {
           pinnedNotificationShowFiveHour ?? this.pinnedNotificationShowFiveHour,
       pinnedNotificationShowWeekly:
           pinnedNotificationShowWeekly ?? this.pinnedNotificationShowWeekly,
+      pinnedNotificationCompact:
+          pinnedNotificationCompact ?? this.pinnedNotificationCompact,
       pinnedNotificationPrivacyMode:
           pinnedNotificationPrivacyMode ?? this.pinnedNotificationPrivacyMode,
       widgetAllAccounts: widgetAllAccounts ?? this.widgetAllAccounts,
@@ -211,6 +220,7 @@ class AppSettings {
     'use24HourFormat': use24HourFormat,
     'accentColor': accentColor,
     'fontChoice': fontChoice,
+    'showUsageGraphs': showUsageGraphs,
     'statusRefreshIntervalSeconds': statusRefreshIntervalSeconds,
     'debugMode': debugMode,
     'warningThresholdPercent': warningThresholdPercent,
@@ -231,6 +241,7 @@ class AppSettings {
     'pinnedNotificationShowProvider': pinnedNotificationShowProvider,
     'pinnedNotificationShowFiveHour': pinnedNotificationShowFiveHour,
     'pinnedNotificationShowWeekly': pinnedNotificationShowWeekly,
+    'pinnedNotificationCompact': pinnedNotificationCompact,
     'pinnedNotificationPrivacyMode': pinnedNotificationPrivacyMode,
     'widgetAllAccounts': widgetAllAccounts,
     'widgetAccountIds': widgetAccountIds,
@@ -247,6 +258,7 @@ class AppSettings {
       use24HourFormat: json['use24HourFormat'] as bool? ?? false,
       accentColor: json['accentColor'] as int? ?? defaultAccentColor,
       fontChoice: json['fontChoice'] as String? ?? defaultFontChoice,
+      showUsageGraphs: json['showUsageGraphs'] as bool? ?? true,
       statusRefreshIntervalSeconds:
           json['statusRefreshIntervalSeconds'] as int? ?? 3600,
       debugMode: json['debugMode'] as bool? ?? false,
@@ -292,6 +304,8 @@ class AppSettings {
           json['pinnedNotificationShowFiveHour'] as bool? ?? true,
       pinnedNotificationShowWeekly:
           json['pinnedNotificationShowWeekly'] as bool? ?? true,
+      pinnedNotificationCompact:
+          json['pinnedNotificationCompact'] as bool? ?? false,
       pinnedNotificationPrivacyMode: _privacyMode(
         json['pinnedNotificationPrivacyMode'],
       ),

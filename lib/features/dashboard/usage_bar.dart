@@ -32,6 +32,7 @@ class UsageBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final showUsageGraphs = context.watch<SettingsProvider>().showUsageGraphs;
     final labelStyle = large
         ? Theme.of(context).textTheme.titleMedium
         : Theme.of(context).textTheme.bodyMedium;
@@ -63,7 +64,7 @@ class UsageBar extends StatelessWidget {
             ),
           ],
         ),
-        ?child,
+        if (showUsageGraphs) ?child,
         if (resetAt != null) ...[
           const SizedBox(height: 4),
           Text(

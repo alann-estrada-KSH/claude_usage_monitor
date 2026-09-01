@@ -45,4 +45,36 @@ void main() {
     expect(body, isNot(contains('Trabajo')));
     expect(body, isNot(contains('21')));
   });
+
+  test('compact notification keeps account percentages without provider', () {
+    final body = NotificationService.buildPersistentBody(
+      [account],
+      languageCode: 'es',
+      privacyMode: 'full',
+      compact: true,
+      showProvider: true,
+      showFiveHour: true,
+      showWeekly: true,
+    );
+    expect(body, 'Trabajo · 5 h 21% · 7 d 54%');
+    expect(body, isNot(contains('Codex')));
+  });
+
+  test('persistent title reflects high usage', () {
+    final title = NotificationService.buildPersistentTitle([
+      account.copyWith(
+        lastKnownUsage: account.lastKnownUsage!.copyWith(fiveHourPercent: 96),
+      ),
+    ], languageCode: 'es');
+    expect(title, 'Casi en el límite');
+  });
+
+  test('hidden notification title does not reveal usage level', () {
+    final title = NotificationService.buildPersistentTitle(
+      [account],
+      languageCode: 'es',
+      privacyMode: 'hidden',
+    );
+    expect(title, 'Monitor de uso');
+  });
 }

@@ -1725,7 +1725,7 @@ class _AccountCard extends StatelessWidget {
                       const SizedBox(height: 8),
                       _buildUsageBars(context, l10n, usage),
                     ],
-                    if (history.length > 1) ...[
+                    if (settings.showUsageGraphs && history.length > 1) ...[
                       const SizedBox(height: 10),
                       UsageHistoryChart(points: history),
                     ],

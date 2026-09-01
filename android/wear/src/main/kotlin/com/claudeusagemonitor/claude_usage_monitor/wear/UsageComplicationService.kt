@@ -8,8 +8,6 @@ import androidx.wear.watchface.complications.data.PlainComplicationText
 import androidx.wear.watchface.complications.data.ShortTextComplicationData
 import androidx.wear.watchface.complications.datasource.ComplicationRequest
 import androidx.wear.watchface.complications.datasource.ComplicationDataSourceService
-import org.json.JSONObject
-
 class UsageComplicationService : ComplicationDataSourceService() {
     override fun onComplicationRequest(
         request: ComplicationRequest,
@@ -17,8 +15,7 @@ class UsageComplicationService : ComplicationDataSourceService() {
     ) {
         val payload = getSharedPreferences(WearDataListenerService.PREFS_NAME, MODE_PRIVATE)
             .getString(WearDataListenerService.KEY_PAYLOAD, null)
-        val text = payload?.let { complicationText(JSONObject(it), request.complicationInstanceId) }
-            ?: "--"
+        val text = complicationText(payload, request.complicationInstanceId)
         val data: ComplicationData = ShortTextComplicationData.Builder(
             PlainComplicationText.Builder(text).build(),
             PlainComplicationText.Builder("Usage Monitor").build(),
@@ -39,12 +36,12 @@ class UsageComplicationService : ComplicationDataSourceService() {
             PlainComplicationText.Builder("Usage Monitor").build(),
         ).build()
 
-    private fun complicationText(payload: JSONObject, instanceId: Int): String {
-        val accounts = payload.optJSONArray("accounts") ?: return "--"
+    private fun complicationText(payload: String?, instanceId: Int): String {
+        val accounts = WearPayload.accounts(WearPayload.parse(payload))
+        if (accounts.isEmpty()) return "--"
         val selected = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
             .getString("complication_$instanceId", null)
-        for (index in 0 until accounts.length()) {
-            val account = accounts.getJSONObject(index)
+        for (account in accounts) {
             if (selected == null || selected == account.optString("id")) {
                 val value = account.optDouble("fiveHourPercent", -1.0)
                 return if (value < 0) "5h --" else "5h ${value.toInt()}%"

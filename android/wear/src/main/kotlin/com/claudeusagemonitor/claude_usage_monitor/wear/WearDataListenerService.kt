@@ -15,6 +15,8 @@ class WearDataListenerService : WearableListenerService() {
                 event.dataItem.uri.path != "/usage-monitor/usage") continue
             val json = DataMapItem.fromDataItem(event.dataItem).dataMap.getString("json")
                 ?: continue
+            val root = WearPayload.parse(json)
+            if (WearPayload.accounts(root).isEmpty()) continue
             getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 .edit().putString(KEY_PAYLOAD, json).apply()
             ComplicationDataSourceUpdateRequester.create(

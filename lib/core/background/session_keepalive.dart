@@ -101,6 +101,7 @@ void sessionKeepAliveCallbackDispatcher() {
         persistentNotificationShowFiveHour:
             settings.pinnedNotificationShowFiveHour,
         persistentNotificationShowWeekly: settings.pinnedNotificationShowWeekly,
+        persistentNotificationCompact: settings.pinnedNotificationCompact,
         persistentNotificationPrivacyMode:
             settings.pinnedNotificationPrivacyMode,
         widgetAllAccounts: settings.widgetAllAccounts,

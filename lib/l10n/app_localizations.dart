@@ -464,6 +464,24 @@ abstract class AppLocalizations {
   /// **'Appearance'**
   String get appearanceSection;
 
+  /// No description provided for @usageDisplaySection.
+  ///
+  /// In en, this message translates to:
+  /// **'Usage display'**
+  String get usageDisplaySection;
+
+  /// No description provided for @showUsageGraphs.
+  ///
+  /// In en, this message translates to:
+  /// **'Show usage graphs'**
+  String get showUsageGraphs;
+
+  /// No description provided for @showUsageGraphsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Hides bars, sparklines, and history while keeping percentages and resets.'**
+  String get showUsageGraphsDescription;
+
   /// No description provided for @themeSystem.
   ///
   /// In en, this message translates to:
@@ -1333,6 +1351,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Show weekly usage'**
   String get notificationShowWeekly;
+
+  /// No description provided for @notificationCompact.
+  ///
+  /// In en, this message translates to:
+  /// **'Show percentages only'**
+  String get notificationCompact;
+
+  /// No description provided for @notificationCompactDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Hides providers and keeps a short per-account view.'**
+  String get notificationCompactDescription;
 
   /// No description provided for @notificationPrivacy.
   ///

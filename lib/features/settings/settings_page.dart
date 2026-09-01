@@ -70,6 +70,11 @@ class SettingsPage extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           _SectionCard(
+            title: l10n.usageDisplaySection,
+            child: const _UsageDisplayControl(),
+          ),
+          const SizedBox(height: 16),
+          _SectionCard(
             title: l10n.accentColorSection,
             child: const _AccentColorControl(),
           ),
@@ -460,6 +465,23 @@ class _ThemeModeControl extends StatelessWidget {
   }
 }
 
+class _UsageDisplayControl extends StatelessWidget {
+  const _UsageDisplayControl();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final settings = context.watch<SettingsProvider>();
+    return SwitchListTile(
+      contentPadding: EdgeInsets.zero,
+      title: Text(l10n.showUsageGraphs),
+      subtitle: Text(l10n.showUsageGraphsDescription),
+      value: settings.showUsageGraphs,
+      onChanged: settings.setShowUsageGraphs,
+    );
+  }
+}
+
 class _AccentColorControl extends StatelessWidget {
   const _AccentColorControl();
 
@@ -648,6 +670,7 @@ class _PinnedNotificationControl extends StatelessWidget {
       persistentNotificationShowFiveHour:
           settings.pinnedNotificationShowFiveHour,
       persistentNotificationShowWeekly: settings.pinnedNotificationShowWeekly,
+      persistentNotificationCompact: settings.pinnedNotificationCompact,
       persistentNotificationPrivacyMode: settings.pinnedNotificationPrivacyMode,
     );
   }
@@ -659,6 +682,7 @@ class _PinnedNotificationControl extends StatelessWidget {
     bool? showProvider,
     bool? showFiveHour,
     bool? showWeekly,
+    bool? compact,
     String? privacyMode,
   }) async {
     await settings.setPinnedNotificationDisplay(
@@ -666,6 +690,7 @@ class _PinnedNotificationControl extends StatelessWidget {
       showProvider: showProvider,
       showFiveHour: showFiveHour,
       showWeekly: showWeekly,
+      compact: compact,
       privacyMode: privacyMode,
     );
     await _save(
@@ -716,6 +741,14 @@ class _PinnedNotificationControl extends StatelessWidget {
             value: settings.pinnedNotificationShowWeekly,
             onChanged: (value) =>
                 _saveDisplay(settings, accounts, showWeekly: value ?? true),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(l10n.notificationCompact),
+            subtitle: Text(l10n.notificationCompactDescription),
+            value: settings.pinnedNotificationCompact,
+            onChanged: (value) =>
+                _saveDisplay(settings, accounts, compact: value),
           ),
           const SizedBox(height: 8),
           Text(l10n.notificationPrivacy),
@@ -847,6 +880,7 @@ class _WidgetAccountsControl extends StatelessWidget {
       persistentNotificationShowFiveHour:
           settings.pinnedNotificationShowFiveHour,
       persistentNotificationShowWeekly: settings.pinnedNotificationShowWeekly,
+      persistentNotificationCompact: settings.pinnedNotificationCompact,
       persistentNotificationPrivacyMode: settings.pinnedNotificationPrivacyMode,
       widgetAllAccounts: allAccounts,
       widgetAccountIds: accountIds,

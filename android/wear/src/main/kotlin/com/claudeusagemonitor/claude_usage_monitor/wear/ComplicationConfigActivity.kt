@@ -10,8 +10,6 @@ import android.widget.LinearLayout
 import android.widget.Spinner
 import android.widget.TextView
 import androidx.wear.watchface.complications.datasource.ComplicationDataSourceService
-import org.json.JSONObject
-
 class ComplicationConfigActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -22,12 +20,9 @@ class ComplicationConfigActivity : Activity() {
         val accounts = mutableListOf<Pair<String, String>>()
         val payload = getSharedPreferences(WearDataListenerService.PREFS_NAME, MODE_PRIVATE)
             .getString(WearDataListenerService.KEY_PAYLOAD, null)
-        payload?.let {
-            val array = JSONObject(it).optJSONArray("accounts")
-            if (array != null) for (index in 0 until array.length()) {
-                val account = array.getJSONObject(index)
-                accounts += account.optString("id") to account.optString("label")
-            }
+        WearPayload.accounts(WearPayload.parse(payload)).forEach { account ->
+            val id = account.optString("id")
+            if (id.isNotEmpty()) accounts += id to account.optString("label")
         }
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL

@@ -48,6 +48,7 @@ class NotificationService {
     List<ClaudeAccount> accounts, {
     required String languageCode,
     required String privacyMode,
+    bool compact = false,
     required bool showProvider,
     required bool showFiveHour,
     required bool showWeekly,
@@ -61,7 +62,7 @@ class NotificationService {
           final usage = account.lastKnownUsage;
           final parts = <String>[
             if (privacyMode != 'hideAccounts') account.label,
-            if (showProvider) account.providerType.displayName,
+            if (!compact && showProvider) account.providerType.displayName,
             if (showFiveHour)
               '5 h ${usage?.fiveHourPercent?.toStringAsFixed(0) ?? '--'}%',
             if (showWeekly)
@@ -70,6 +71,44 @@ class NotificationService {
           return parts.join(' · ');
         })
         .join('\n');
+  }
+
+  static String buildPersistentTitle(
+    List<ClaudeAccount> accounts, {
+    required String languageCode,
+    String privacyMode = 'full',
+  }) {
+    if (privacyMode == 'hidden') {
+      return languageCode == 'es' ? 'Monitor de uso' : 'Usage Monitor';
+    }
+    final highest = accounts.fold<double?>(null, (highest, account) {
+      final usage = account.lastKnownUsage;
+      final values = [
+        usage?.fiveHourPercent,
+        usage?.weeklyPercent,
+        usage?.monthlyPercent,
+        usage?.claudeGptFiveHourPercent,
+        usage?.claudeGptWeeklyPercent,
+      ].whereType<double>();
+      final accountHighest = values.isEmpty
+          ? null
+          : values.reduce((a, b) => a > b ? a : b);
+      if (accountHighest == null) return highest;
+      return highest == null || accountHighest > highest
+          ? accountHighest
+          : highest;
+    });
+    final spanish = languageCode == 'es';
+    if (highest == null) {
+      return spanish ? 'Estado de tus cuentas' : 'Your accounts at a glance';
+    }
+    if (highest >= 95) {
+      return spanish ? 'Casi en el límite' : 'Almost at the limit';
+    }
+    if (highest >= 80) {
+      return spanish ? 'Vas cerca del límite' : 'Getting close to the limit';
+    }
+    return spanish ? 'Todo bajo control' : 'All under control';
   }
 
   /// Lightweight init for the WorkManager background isolate -- skips
@@ -163,6 +202,7 @@ class NotificationService {
     bool showProvider = true,
     bool showFiveHour = true,
     bool showWeekly = true,
+    bool compact = false,
     String privacyMode = 'full',
   }) async {
     if (!_initialized || !Platform.isAndroid) return;
@@ -186,14 +226,20 @@ class NotificationService {
       selected,
       languageCode: lang,
       privacyMode: privacyMode,
+      compact: compact,
       showProvider: showProvider,
       showFiveHour: showFiveHour,
       showWeekly: showWeekly,
     );
+    final title = buildPersistentTitle(
+      selected,
+      languageCode: lang,
+      privacyMode: privacyMode,
+    );
     try {
       await _plugin.show(
         _persistentUsageId,
-        lang == 'es' ? 'Monitor de uso' : 'Usage Monitor',
+        title,
         lines,
         NotificationDetails(
           android: AndroidNotificationDetails(

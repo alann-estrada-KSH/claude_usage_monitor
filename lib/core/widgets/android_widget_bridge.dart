@@ -39,6 +39,7 @@ class AndroidWidgetBridge {
     bool persistentNotificationShowProvider = true,
     bool persistentNotificationShowFiveHour = true,
     bool persistentNotificationShowWeekly = true,
+    bool persistentNotificationCompact = false,
     String persistentNotificationPrivacyMode = 'full',
     bool widgetAllAccounts = true,
     List<String> widgetAccountIds = const [],
@@ -108,6 +109,7 @@ class AndroidWidgetBridge {
         showProvider: persistentNotificationShowProvider,
         showFiveHour: persistentNotificationShowFiveHour,
         showWeekly: persistentNotificationShowWeekly,
+        compact: persistentNotificationCompact,
         privacyMode: persistentNotificationPrivacyMode,
       );
       if (notifyNative) await AndroidSurfaceBridge.requestUpdate();

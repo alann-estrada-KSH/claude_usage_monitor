@@ -49,9 +49,9 @@ class WearMainActivity : Activity() {
         accountsContainer.removeAllViews()
         val payload = getSharedPreferences(WearDataListenerService.PREFS_NAME, MODE_PRIVATE)
             .getString(WearDataListenerService.KEY_PAYLOAD, null)
-        val root = payload?.let { parsePayload(it) }
-        val accounts = root?.optJSONArray("accounts")
-        if (root == null || accounts == null || accounts.length() == 0) {
+        val root = WearPayload.parse(payload)
+        val accounts = WearPayload.accounts(root)
+        if (accounts.isEmpty()) {
             noData.visibility = View.VISIBLE
             accountsContainer.visibility = View.GONE
             syncStatus.text = getString(R.string.no_phone_data)
@@ -60,21 +60,15 @@ class WearMainActivity : Activity() {
         noData.visibility = View.GONE
         accountsContainer.visibility = View.VISIBLE
 
-        val updatedAt = root.optString("updatedAt")
+        val updatedAt = root?.optString("updatedAt") ?: ""
         syncStatus.text = if (updatedAt.isEmpty()) {
             getString(R.string.watch_phone_source)
         } else {
             getString(R.string.watch_last_sync, formatTime(updatedAt))
         }
-        for (index in 0 until accounts.length()) {
-            accountsContainer.addView(accountCard(accounts.getJSONObject(index)))
+        for (account in accounts) {
+            runCatching { accountsContainer.addView(accountCard(account)) }
         }
-    }
-
-    private fun parsePayload(value: String): JSONObject? = try {
-        JSONObject(value)
-    } catch (_: Exception) {
-        null
     }
 
     private fun accountCard(account: JSONObject): View {

@@ -8,7 +8,9 @@ void main() {
       pinnedNotificationShowProvider: false,
       pinnedNotificationShowFiveHour: true,
       pinnedNotificationShowWeekly: false,
+      pinnedNotificationCompact: true,
       pinnedNotificationPrivacyMode: 'hidden',
+      showUsageGraphs: false,
     );
 
     final restored = AppSettings.fromJson(settings.toJson());
@@ -16,7 +18,9 @@ void main() {
     expect(restored.pinnedNotificationShowProvider, isFalse);
     expect(restored.pinnedNotificationShowFiveHour, isTrue);
     expect(restored.pinnedNotificationShowWeekly, isFalse);
+    expect(restored.pinnedNotificationCompact, isTrue);
     expect(restored.pinnedNotificationPrivacyMode, 'hidden');
+    expect(restored.showUsageGraphs, isFalse);
   });
 
   test('invalid notification privacy mode falls back to full', () {
