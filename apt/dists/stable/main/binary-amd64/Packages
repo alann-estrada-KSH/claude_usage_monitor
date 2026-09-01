@@ -1,13 +1,13 @@
 Package: claude-usage-monitor
-Version: 1.4.12
+Version: 1.4.13
 Architecture: amd64
 Maintainer: Alann Estrada <https://github.com/alannnn-estrada>
 Depends: libgtk-3-0, libwebkit2gtk-4.1-0, libayatana-appindicator3-1
-Filename: pool/main/claude-usage-monitor_1.4.12_amd64.deb
-Size: 9413830
-MD5sum: b951e9e09b61cf9d0df6595b10d1a892
-SHA1: 41844598c8aed396c38f58b93eac4eb5e6e45fa3
-SHA256: 17a93ca779da10921a22eb96a744ef28ad4af04bba583a0e4a0da4d8ba6ac6be
+Filename: pool/main/claude-usage-monitor_1.4.13_amd64.deb
+Size: 9412652
+MD5sum: 34a69afa75c3f33682a8061ee78b9b2e
+SHA1: 97ed1f63b57a6a1051f8ef2f1508c495fc51f27a
+SHA256: 09958f20c8dbee85f097d02fb82b89d59183cfc74f5275f9b85febc2e5f276cf
 Section: utils
 Priority: optional
 Description: Unofficial Claude.ai usage monitor
